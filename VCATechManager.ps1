@@ -2,7 +2,7 @@
 
 
 # Set version
-$version = "1.57"  # CONFIGURATION FLEXIBILITY: Added default config values for testing while maintaining security requirements
+$version = "1.58"  # CONFIGURATION FLEXIBILITY: Added default config values for testing while maintaining security requirements
 
 # Load configuration from JSON file
 $configPath = "$PSScriptRoot\Private\config.json"
@@ -921,7 +921,7 @@ try {
         }
 
         if ($reservations) {
-            $reservations | Sort-Object IPAddress | Format-Table -Property IPAddress, ClientId, Name, Description, @{Name="DeviceGroup"; Expression={Get-DeviceGroup $_.ClientId}}
+            $reservations | Sort-Object IPAddress, ClientId -Unique | Format-Table -Property IPAddress, ClientId, Name, Description, @{Name="DeviceGroup"; Expression={Get-DeviceGroup $_.ClientId}}
             $groupResults += $reservations
         } else {
             Write-Host "No reservations found for scope '$scopeId'."
@@ -2351,6 +2351,155 @@ try {
         }
     }
 
+    # Function to show all logged on users and launch VNC (similar to VCAHospLauncher option 77)
+    function Get-AllLoggedOnUsers {
+        param([string]$AU)
+
+        try {
+            Write-Log "Starting Show All Logged On Users for AU $AU"
+
+            $servers = Get-CachedServers -AU $AU -ErrorAction Stop
+            if (-not $servers) {
+                Write-Host "No servers found for AU $AU." -ForegroundColor Yellow
+                return
+            }
+
+            # Collect all active sessions from all servers
+            $allSessions = @()
+            $totalServers = $servers.Count
+            $i = 0
+
+            foreach ($server in $servers) {
+                $i++
+                Write-Progress -Activity "Querying logged on users" -Status "Server $i of $totalServers : $server" -PercentComplete (($i / $totalServers) * 100)
+                try {
+                    $sessions = Get-TSSession -ComputerName $server -ErrorAction SilentlyContinue | Where-Object { $_.State -eq 'Active' -and $_.UserName -notlike '*SYSTEM*' -and $_.UserName -notlike '*NETWORK*' }
+                    foreach ($session in $sessions) {
+                        $allSessions += [PSCustomObject]@{
+                            Server     = $server
+                            UserName   = $session.UserName
+                            SessionId  = $session.SessionId
+                            State      = $session.State
+                            LogOnTime  = $session.LogOnTime
+                            ClientIP   = $session.IPAddress
+                            ClientName = $session.ClientName
+                            Title      = "Loading..."
+                            Name       = "Loading..."
+                        }
+                    }
+                } catch {
+                    # Silently continue on error
+                }
+            }
+
+            Write-Progress -Activity "Querying logged on users" -Completed
+            Write-Log "Found $($allSessions.Count) active sessions across all servers"
+
+            if ($allSessions.Count -eq 0) {
+                Write-Host "No active user sessions found on any servers for AU $AU." -ForegroundColor Yellow
+                return
+            }
+
+            # Get unique usernames and query AD for titles
+            $uniqueUsernames = $allSessions | Select-Object -ExpandProperty UserName -Unique
+            Write-Progress -Activity "Retrieving AD user information" -Status "Querying Active Directory..." -PercentComplete 0
+
+            foreach ($username in $uniqueUsernames) {
+                try {
+                    $userParams = @{ Identity = $username; Properties = 'Name','Title'; ErrorAction = 'Stop' }
+                    if ($config -and $config.InternalDomains -and $config.InternalDomains.PrimaryDomain) { $userParams['Server'] = $config.InternalDomains.PrimaryDomain }
+                    if ($ADCredential -and ($ADCredential -is [pscredential])) { $userParams['Credential'] = $ADCredential }
+                    $adUser = Get-ADUser @userParams
+                    $title = $adUser.Title
+                    if (-not $title) { $title = "N/A" }
+                    $name = $adUser.Name
+                    if (-not $name) { $name = "N/A" }
+                } catch {
+                    $title = "N/A"
+                    $name = "N/A"
+                }
+
+                # Update all sessions for this user with the title and name
+                $allSessions | Where-Object { $_.UserName -eq $username } | ForEach-Object { 
+                    $_.Title = $title
+                    $_.Name = $name
+                }
+            }
+
+            Write-Progress -Activity "Retrieving AD user information" -Completed
+
+            # Resolve IP addresses via DNS if ClientIP is empty
+            foreach ($session in $allSessions) {
+                if (-not $session.ClientIP -or $session.ClientIP -eq "N/A" -or $session.ClientIP -eq "") {
+                    if ($session.ClientName -and $session.ClientName -ne "") {
+                        try {
+                            $addresses = [System.Net.Dns]::GetHostAddresses($session.ClientName)
+                            # Prefer IPv4 over IPv6
+                            $resolvedIP = $addresses | Where-Object { $_.AddressFamily -eq 'InterNetwork' } | Select-Object -First 1 | Select-Object -ExpandProperty IPAddressToString
+                            if (-not $resolvedIP) {
+                                $resolvedIP = $addresses | Select-Object -First 1 | Select-Object -ExpandProperty IPAddressToString
+                            }
+                            $session.ClientIP = $resolvedIP
+                        } catch {
+                            $session.ClientIP = "N/A"
+                        }
+                    } else {
+                        $session.ClientIP = "N/A"
+                    }
+                }
+            }
+
+            # Display sessions in Out-GridView for selection
+            $selectedSession = $allSessions | Select-Object Name, UserName, Title, Server, ClientIP, LogOnTime | Sort-Object Name | Out-GridView -Title "Select a logged on user session for AU $AU to launch VNC" -OutputMode Single
+
+            if ($selectedSession) {
+                # Get the full session object from allSessions
+                $selectedSession = $allSessions | Where-Object { $_.UserName -eq $selectedSession.UserName -and $_.Server -eq $selectedSession.Server -and $_.ClientIP -eq $selectedSession.ClientIP } | Select-Object -First 1
+
+                Write-Host "Selected Session Details:" -ForegroundColor Cyan
+                Write-Host "User: $($selectedSession.UserName)" -ForegroundColor White
+                Write-Host "Server: $($selectedSession.Server)" -ForegroundColor White
+                Write-Host "Client IP: $($selectedSession.ClientIP)" -ForegroundColor White
+                Write-Host "Client Name: $($selectedSession.ClientName)" -ForegroundColor White
+
+                if ($selectedSession.ClientIP -eq "N/A") {
+                    Write-Host "Note: Client IP is not available. VNC may not work without a valid IP." -ForegroundColor Yellow
+                    Write-Host "If VNC fails, manually copy the IP above and connect via your VNC client." -ForegroundColor Yellow
+                } else {
+                    Write-Host "Tip: If auto-launch fails, manually copy the IP above for VNC." -ForegroundColor Cyan
+                }
+
+                # Show detailed AD information like in Get-UserLogon
+                try {
+                    # Get domain password policy for expiry calculation
+                    $pwdParams = @{ ErrorAction = 'Stop' }
+                    if ($config -and $config.InternalDomains -and $config.InternalDomains.PrimaryDomain) { $pwdParams['Server'] = $config.InternalDomains.PrimaryDomain }
+                    if ($ADCredential -and ($ADCredential -is [pscredential])) { $pwdParams['Credential'] = $ADCredential }
+                    $MaxPasswordAge = (Get-ADDefaultDomainPasswordPolicy @pwdParams).MaxPasswordAge
+
+                    $userParams = @{ Identity = $selectedSession.UserName; Properties = 'Name','Title','OfficePhone','Office','Department','EmailAddress','StreetAddress','City','State','PostalCode','SID','Created','extensionAttribute3','PasswordLastSet'; ErrorAction = 'Stop' }
+                    if ($config -and $config.InternalDomains -and $config.InternalDomains.PrimaryDomain) { $userParams['Server'] = $config.InternalDomains.PrimaryDomain }
+                    if ($ADCredential -and ($ADCredential -is [pscredential])) { $userParams['Credential'] = $ADCredential }
+                    $adUser = Get-ADUser @userParams
+                    Write-Host "`nAD Properties for $($selectedSession.UserName) :" -ForegroundColor Cyan
+                    $adUser | Select-Object Name, Title, @{n='OfficePhone'; e={$_.OfficePhone}}, Office, Department, EmailAddress, StreetAddress, City, State, PostalCode, SID, Created, extensionAttribute3, PasswordLastSet, @{n='PasswordExpires'; e={ if ($_.PasswordLastSet) { $_.PasswordLastSet + $MaxPasswordAge } else { 'Never Set' } }} | Format-List
+                } catch {
+                    Write-Host "Could not retrieve AD properties for $($selectedSession.UserName): $($_.Exception.Message)" -ForegroundColor Yellow
+                }
+
+                # Launch VNC using helper function
+                $userIP = $selectedSession.ClientIP
+                Start-VNCViewer -IPAddress $userIP -Username $selectedSession.UserName -Computer $selectedSession.Server
+            } else {
+                Write-Host "No session selected." -ForegroundColor Yellow
+            }
+
+        } catch {
+            Write-Host "Error in Get-AllLoggedOnUsers: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Log "Error in Get-AllLoggedOnUsers: $($_.Exception.Message)"
+        }
+    }
+
     # Function for Invoke GPUpdate Force (updated to use parallel Invoke-Command for speed)
     function Invoke-GPUpdateForce {
         param([string]$AU)
@@ -2795,6 +2944,7 @@ try {
             "3" = "Add DHCP Reservation"
             "4" = "GPUpdate /Force on Selected Server"
             "5" = "List AD Users and Check Logon"
+            "5b" = "Show All Logged On Users and Launch VNC"
             "6" = "Kill Sparky Shell for Logged-in User"
             "7" = "Exit"
             "8" = "Help"
@@ -2920,6 +3070,10 @@ try {
                         Write-Host "Error in option 5: $($_.Exception.Message)" -ForegroundColor Red
                         Write-Log "Error in option 5: $($_.Exception.Message) | StackTrace: $($_.Exception.StackTrace)"
                     }
+                }
+                "5b" {
+                    # Show All Logged On Users and Launch VNC
+                    Get-AllLoggedOnUsers -AU $AU
                 }
                 "6" {
                     Stop-SparkyShell -AU $AU

@@ -2,6 +2,10 @@ VCA Tech Manager - Changelog
 Author: Marc Yap
 Contributors: Grok (AI Assistant)
 
+v1.58 - 2025-11-03
++ DHCP RESERVATION DEDUPLICATION: Fixed duplicate DHCP reservations showing in option 1's reservation list by modifying the Invoke-AbaxisMacSearch function to sort reservations by IPAddress and ClientId with -Unique flag, eliminating duplicates when multiple DHCP servers return the same reservation
++ VNC USER SELECTION ENHANCEMENT: Added option 5b "Show All Logged On Users and Launch VNC" with comprehensive AD integration displaying user Name and Title, alphabetical sorting by username, streamlined workflow without pauses, and VNC viewer launch for selected users across all servers in the AU
+
 v1.57 - 2025-10-31
 + CREDENTIAL MANAGEMENT CENTRALIZATION: Implemented centralized credential management to fix multiple credential prompts in DHCP functions (12, 12c, 12d) by adding Test-AdminCredentials and Get-AdminSecureCredential functions that load, test, prompt, and save admin credentials once per function call instead of passive loading causing repeated access-denied failures
 + USER EXPERIENCE IMPROVEMENT: Enhanced error checking functions (2, 2b, 2c) to only prompt for export/email when errors are actually selected from Out-GridView, preventing unnecessary prompts when users close the grid without selection; changed from single to multiple selection mode for better usability
