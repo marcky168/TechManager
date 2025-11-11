@@ -2,7 +2,7 @@
 
 
 # Set version
-$version = "1.58"  # CONFIGURATION FLEXIBILITY: Added default config values for testing while maintaining security requirements
+$version = "1.59"  # CONFIGURATION FLEXIBILITY: Added default config values for testing while maintaining security requirements
 
 # Load configuration from JSON file
 $configPath = "$PSScriptRoot\Private\config.json"
@@ -895,9 +895,15 @@ try {
             }
 
             if ($matchingLeases) {
+                # Deduplicate matching leases by IPAddress before displaying
+                $uniqueMatchingLeases = $matchingLeases | Sort-Object IPAddress -Unique
                 Write-Host "`nLeases for $group" -ForegroundColor Green
-                $matchingLeases | Sort-Object IPAddress | Format-Table -Property IPAddress, ClientId, @{Name="LastLeased"; Expression={$_.LeaseExpiryTime}}
-                $groupResults += $matchingLeases
+                $uniqueMatchingLeases | Sort-Object IPAddress | Format-Table -Property IPAddress, ClientId, @{Name="LastLeased"; Expression={$_.LeaseExpiryTime}}
+                # Add Source property to leases
+                $leasesWithSource = $uniqueMatchingLeases | ForEach-Object {
+                    $_ | Add-Member -NotePropertyName 'Source' -NotePropertyValue 'DHCP' -PassThru -Force
+                }
+                $groupResults += $leasesWithSource
             } else {
                 Write-Host "`nNo leases found for group $group"
             }
@@ -921,8 +927,14 @@ try {
         }
 
         if ($reservations) {
-            $reservations | Sort-Object IPAddress, ClientId -Unique | Format-Table -Property IPAddress, ClientId, Name, Description, @{Name="DeviceGroup"; Expression={Get-DeviceGroup $_.ClientId}}
-            $groupResults += $reservations
+            # Deduplicate reservations by IPAddress before displaying
+            $uniqueReservations = $reservations | Sort-Object IPAddress -Unique
+            $uniqueReservations | Sort-Object IPAddress, ClientId | Format-Table -Property IPAddress, ClientId, Name, Description, @{Name="DeviceGroup"; Expression={Get-DeviceGroup $_.ClientId}}
+            # Add Source property to reservations
+            $reservationsWithSource = $uniqueReservations | ForEach-Object {
+                $_ | Add-Member -NotePropertyName 'Source' -NotePropertyValue 'DHCP' -PassThru -Force
+            }
+            $groupResults += $reservationsWithSource
         } else {
             Write-Host "No reservations found for scope '$scopeId'."
         }
@@ -948,6 +960,32 @@ try {
                 $groupResults += $arpObject
             }
         }
+
+        # Deduplicate devices by IPAddress, prioritizing DHCP data over ARP data
+        $deduplicatedResults = @()
+        $ipAddresses = @{}
+        
+        foreach ($device in $groupResults) {
+            $ip = $device.IPAddress.ToString()
+            if (-not $ipAddresses.ContainsKey($ip)) {
+                # First time seeing this IP, add it
+                $ipAddresses[$ip] = $device
+                $deduplicatedResults += $device
+            } else {
+                # IP already exists, check if we should replace with DHCP data
+                $existingDevice = $ipAddresses[$ip]
+                if ($device.Source -eq "DHCP" -and $existingDevice.Source -eq "ARP") {
+                    # Replace ARP entry with DHCP entry
+                    $index = $deduplicatedResults.IndexOf($existingDevice)
+                    $deduplicatedResults[$index] = $device
+                    $ipAddresses[$ip] = $device
+                }
+                # If both are DHCP or both are ARP, keep the first one (DHCP leases/reservations are added first)
+            }
+        }
+        
+        $groupResults = $deduplicatedResults
+        Write-Host "`nTotal unique devices found: $($groupResults.Count)" -ForegroundColor Green
 
         # Ping other leased devices (excluding Fuse)
         $otherDevices = $groupResults | Where-Object { $_.ClientId -notmatch '^00-90-FB|^00-50-56|^00-0C-29' }
@@ -1014,14 +1052,42 @@ try {
 
         if ($fuseIpAddresses -and $fuseIpAddresses.Length -gt 0) {
             $fuseIp = $fuseIpAddresses[0].ToString()
-            # Determine Fuse type based on IP
-            if ($fuseIp -like "10.242*") {
-                $fuseType = "Virtual Fuse"
-            } else {
+            # Determine Fuse type based on MAC address prefix - check DHCP data first, then ARP
+            $fuseMac = $null
+
+            # First, try to get MAC from DHCP leases
+            $dhcpEntry = $leases | Where-Object { $_.IPAddress.ToString() -eq $fuseIp } | Select-Object -First 1
+            if ($dhcpEntry -and $dhcpEntry.ClientId) {
+                $fuseMac = Convert-MacAddress $dhcpEntry.ClientId
+            }
+
+            # If not found in leases, try reservations
+            if (-not $fuseMac) {
+                $reservationEntry = $reservations | Where-Object { $_.IPAddress.ToString() -eq $fuseIp } | Select-Object -First 1
+                if ($reservationEntry -and $reservationEntry.ClientId) {
+                    $fuseMac = Convert-MacAddress $reservationEntry.ClientId
+                }
+            }
+
+            # Fall back to ARP data if DHCP doesn't have it
+            if (-not $fuseMac) {
+                $fuseMac = $arpResults | Where-Object { $_.IPAddress -eq $fuseIp } | Select-Object -ExpandProperty LinkLayerAddress -First 1
+                if ($fuseMac) {
+                    $fuseMac = Convert-MacAddress $fuseMac
+                }
+            }
+
+            # Determine Fuse type: only 00-90-FB is physical, others are virtual
+            if ($fuseMac -and $fuseMac.StartsWith("0090FB")) {
                 $fuseType = "Physical Fuse"
+            } else {
+                $fuseType = "Virtual Fuse"
             }
             Write-Host "`nFuse Device IP $fuseType from nslookup on $fuseHostname : " -ForegroundColor Green -NoNewline
             Write-Host "$fuseIp" -ForegroundColor Yellow
+            if ($fuseMac) {
+                Write-Host "Fuse Device MAC: $fuseMac" -ForegroundColor Yellow
+            }
             $pingResult = Test-Connection -ComputerName $fuseIp -Count 4 -ErrorAction SilentlyContinue
             if ($pingResult) {
                 $pingResult | Format-Table -Property Address, ResponseTime, StatusCode
@@ -1036,9 +1102,9 @@ try {
                 Start-Process "msedge" -ArgumentList $fuseUrl
                 Write-Host "Opening Fuse webpage: $fuseUrl" -ForegroundColor Green
             }
-            # Offer vSphere reboot if not responding and virtual
-            if (-not $pingResult -and $fuseIp -like "10.242*") {
-                $openVSphere = (Read-Host "Fuse IP starts with 10.242 and is not responding. Open vSphere to reboot Fuse? (y/n)").Trim().ToLower()
+            # Offer vSphere reboot if not responding and virtual (MAC-based classification)
+            if (-not $pingResult -and $fuseType -eq "Virtual Fuse") {
+                $openVSphere = (Read-Host "Fuse is virtual and is not responding. Open vSphere to reboot Fuse? (y/n)").Trim().ToLower()
                 if ($openVSphere -eq 'y') {
                     if ($HospitalInfo -and $HospitalInfo.'Time Zone') {
                         $timeZone = $HospitalInfo.'Time Zone'
@@ -2913,6 +2979,14 @@ try {
                     "America/Los_Angeles" = "Pacific Standard Time"
                     "America/Detroit" = "Eastern Standard Time"
                     "America/Toronto" = "Eastern Standard Time"
+                    "Pacific/Honolulu" = "Hawaiian Standard Time"
+                    "America/Phoenix" = "US Mountain Standard Time"
+                    "America/Edmonton" = "Mountain Standard Time"
+                    "America/Vancouver" = "Pacific Standard Time"
+                    "America/Halifax" = "Atlantic Standard Time"
+                    "America/anchorage" = "Alaskan Standard Time"
+                    "America/indiana/indianapolis" = "Eastern Standard Time"
+                    "America/Regina" = "Canada Central Standard Time"
                     # Add more mappings
                 }
                 $timeZoneId = $HospitalInfo.'Time Zone'
@@ -2992,6 +3066,13 @@ try {
                         "America/Phoenix" = "US Mountain Standard Time"
                         "America/Detroit" = "Eastern Standard Time"
                         "America/Toronto" = "Eastern Standard Time"
+                        "Pacific/Honolulu" = "Hawaiian Standard Time"
+                        "America/Edmonton" = "Mountain Standard Time"
+                        "America/Vancouver" = "Pacific Standard Time"
+                        "America/Halifax" = "Atlantic Standard Time"
+                        "America/anchorage" = "Alaskan Standard Time"
+                        "America/indiana/indianapolis" = "Eastern Standard Time"
+                        "America/Regina" = "Canada Central Standard Time"
                         # Add more mappings as needed based on HOSPITALMASTER.xlsx
                     }
                     $timeZoneId = $HospitalInfo.'Time Zone'
@@ -3218,7 +3299,7 @@ try {
                 }
                 "13" {
                     # Launch ServiceNow for AU All Tickets
-                    $snUrl = "https://marsvh.service-now.com/now/nav/ui/classic/params/target/incident_list.do?sysparm_query=u_departmentLIKE$AU%20-&sysparm_first_row=1&sysparm_view="
+                    $snUrl = "https://marsvh.service-now.com/now/nav/ui/classic/params/target/incident_list.do%3Fsysparm_query%3Du_departmentLIKE$AU%2520-%26sysparm_first_row%3D1%26sysparm_view%3D"
                     Start-Process $snUrl
                     Write-Host "Opening ServiceNow for AU $AU all tickets." -ForegroundColor Green
                 }
@@ -3294,7 +3375,7 @@ try {
                 }
                 "13b" {
                     # Launch ServiceNow for AU Open Tickets
-                    $snUrl = "https://marsvh.service-now.com/now/nav/ui/classic/params/target/incident_list.do?sysparm_query=u_departmentLIKE$AU%20-^incident_state!=7^ORincident_state=NULL&sysparm_first_row=1&sysparm_view="
+                    $snUrl = "https://marsvh.service-now.com/now/nav/ui/classic/params/target/incident_list.do%3Fsysparm_query%3Du_departmentLIKE$AU%2520-%255Eincident_state!%253D6%255EORincident_state%253DNULL%255Eincident_state!%253D7%255EORincident_state%253DNULL%26sysparm_first_row%3D1%26sysparm_view%3D"
                     Start-Process $snUrl
                     Write-Host "Opening ServiceNow for AU $AU open tickets." -ForegroundColor Green
                 }

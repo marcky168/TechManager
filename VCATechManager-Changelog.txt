@@ -2,6 +2,11 @@ VCA Tech Manager - Changelog
 Author: Marc Yap
 Contributors: Grok (AI Assistant)
 
+v1.59 - 2025-11-11
++ FUSE DEVICE CLASSIFICATION FIX: Corrected MAC address format comparison in Invoke-AbaxisMacSearch function - changed from checking "00-90-FB" to "0090FB" to match the normalized format from Convert-MacAddress function, ensuring physical Fuses with MAC prefix 00-90-FB are correctly identified as physical devices instead of virtual
++ DHCP DEDUPLICATION ENHANCEMENT: Added deduplication logic for DHCP leases and reservations in Invoke-AbaxisMacSearch function using Sort-Object IPAddress -Unique to prevent duplicate devices from appearing when multiple DHCP servers return the same lease/reservation data
++ SERVICENOW URL ENCODING FIX: Fixed ServiceNow URLs for options 13 and 13b by implementing proper URL encoding - replaced partially encoded URLs with fully URL-encoded versions to prevent PowerShell from mangling special characters, ensuring correct department filtering and incident state filtering for open tickets only
+
 v1.58 - 2025-11-03
 + DHCP RESERVATION DEDUPLICATION: Fixed duplicate DHCP reservations showing in option 1's reservation list by modifying the Invoke-AbaxisMacSearch function to sort reservations by IPAddress and ClientId with -Unique flag, eliminating duplicates when multiple DHCP servers return the same reservation
 + VNC USER SELECTION ENHANCEMENT: Added option 5b "Show All Logged On Users and Launch VNC" with comprehensive AD integration displaying user Name and Title, alphabetical sorting by username, streamlined workflow without pauses, and VNC viewer launch for selected users across all servers in the AU
