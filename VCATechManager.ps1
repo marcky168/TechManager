@@ -2,7 +2,7 @@
 
 
 # Set version
-$version = "1.59"  # CONFIGURATION FLEXIBILITY: Added default config values for testing while maintaining security requirements
+$version = "1.60"  # CONFIGURATION FLEXIBILITY: Added default config values for testing while maintaining security requirements
 
 # Load configuration from JSON file
 $configPath = "$PSScriptRoot\Private\config.json"
@@ -2864,55 +2864,25 @@ try {
         if ($HospitalMaster) {
             $HospitalInfo = $HospitalMaster.Where({ $PSItem.'Hospital Number' -eq $AU -or $PSItem.'Hospital Number' -eq "0$AU" -or $PSItem.'Hospital Number' -eq "00$AU" -or $PSItem.'Hospital Number' -eq "000$AU" }) | Select-Object -First 1
             if ($HospitalInfo) {
-                Write-Host "`nLocation:" -ForegroundColor Cyan
-                Write-Host "$($HospitalInfo.'Operating Name') #$($HospitalInfo.'Hospital Number')"
-                Write-Host "$($HospitalInfo.Address)"
-                Write-Host "$($HospitalInfo.City), $($HospitalInfo.St) $($HospitalInfo.Zip)"
-                Write-Host ''
-                Write-Host 'VCA Site Contact:' -ForegroundColor Cyan
-                Write-Host "$($HospitalInfo.'Hospital Manager'), $($HospitalInfo.'Hospital Manager Email')"
-                Write-Host "$($HospitalInfo.Phone)"
-
-                Write-Host ''
-                Write-Host 'Misc. info:' -ForegroundColor Cyan
-                Write-Host "Time Zone              : $($HospitalInfo.'Time Zone')"
-                Write-Host "URL                    : $($HospitalInfo.GPURL)"
-                Write-Host "Back Line              : $($HospitalInfo.'Back Line')"
-                Write-Host "System Conversion Date : $($HospitalInfo.'System Conversion Date')"
-                Write-Host "System Type            : $($HospitalInfo.'System Type')"
-                Write-Host ''
-
-
-                # Retrieve hospital hours from standard formatted vca site (dynamic fetching)
-                Write-Host 'Hours & Info' -ForegroundColor Cyan
+                # Fetch hours
+                $hours = "N/A"
                 if ($HospitalInfo.GPURL -and ($($HospitalInfo.'Hospital Number') -notmatch '^[8][0-9]{4}$')) {
                     try {
                         $HospitalWeb = Invoke-WebRequest -Uri $HospitalInfo.GPURL -TimeoutSec 10 -ErrorAction Stop
                         if ($HospitalWeb) {
                             $HospitalWebFiltered = $($HospitalWeb.ParsedHtml.body.getElementsByClassName('accordion__item')).innertext
                             if ($HospitalWebFiltered) {
-                                $HospitalWebFiltered
+                                $hours = $HospitalWebFiltered -join "`n"
                             } else {
                                 $HospitalWebFiltered2 = $($HospitalWeb.ParsedHtml.body.getElementsByClassName('hospital-info__middle ')).getElementsByClassName('hospital-info__column col-12 col-md-3 d-flex flex-column')[1].innertext
                                 if ($HospitalWebFiltered2) {
-                                    $HospitalWebFiltered2
+                                    $hours = $HospitalWebFiltered2
                                 }
                             }
                         }
                     } catch {
-                        Write-Warning $_.Exception.Message
-                        # New: Offer to open hospital website if hours fail to load
-                        $openSite = Read-Host "Failed to load hospital hours. Open hospital website in browser? (y/n)"
-                        if ($openSite.ToLower() -eq 'y' -and $HospitalInfo.GPURL) {
-                            try {
-                                Start-Process "msedge" -ArgumentList $HospitalInfo.GPURL
-                                Write-Host "Hospital website opened: $($HospitalInfo.GPURL)" -ForegroundColor Green
-                            } catch {
-                                Write-Host "Failed to open hospital website: $($_.Exception.Message)" -ForegroundColor Red
-                            }
-                        }
+                        # Silently fail
                     }
-
                     if (-not $HospitalWeb -or (-not $HospitalWebFiltered -and -not $HospitalWebFiltered2)) {
                         try {
                             $HospitalHours = Invoke-RestMethod -Uri "https://uat.vcahospitals.com/api/content/hospital/getUSHospitalHours?HospitalID=$($HospitalInfo.'Hospital Number')" -TimeoutSec 10 -ErrorAction Stop
@@ -2945,21 +2915,72 @@ try {
                                     misc_hours        = $_.misc_hours -replace '<[^>]+>', ''
                                 }
                             }
-                            $HospitalHoursFormatted | Format-List
+                            $hours = $HospitalHoursFormatted | Format-List | Out-String
                         } catch {
-                            Write-Warning "Failed to fetch hours from API: $($_.Exception.Message)"
+                            # Silently fail
                         }
                     }
                 } else {
                     # Canada Hours API
                     try {
-                        Invoke-RestMethod -Uri "https://uat.vcacanada.com/api/Content/Hospital/GetCAHospitalHours?HospitalID=$($HospitalInfo.'Hospital Number')" -TimeoutSec 10 | Out-String
+                        $canadaHours = Invoke-RestMethod -Uri "https://uat.vcacanada.com/api/Content/Hospital/GetCAHospitalHours?HospitalID=$($HospitalInfo.'Hospital Number')" -TimeoutSec 10
+                        $hours = $canadaHours | Out-String
                     } catch {
-                        Write-Warning "Failed to fetch Canada hours: $($_.Exception.Message)"
+                        # Silently fail
                     }
                 }
-                Write-Host ''
-                Start-Sleep -Seconds 2  # Pause to ensure info is visible
+                # Display hospital info in a separate PowerShell console window
+                if ($HospitalMaster -and $HospitalInfo) {
+                    # Create structured data for easy coloring and copying
+                    $hospitalData = @(
+                        @{ Label = "Operating Name"; Value = $HospitalInfo.'Operating Name' }
+                        @{ Label = "Hospital Number"; Value = $HospitalInfo.'Hospital Number' }
+                        @{ Label = "Address"; Value = $HospitalInfo.Address }
+                        @{ Label = "City"; Value = $HospitalInfo.City }
+                        @{ Label = "State"; Value = $HospitalInfo.St }
+                        @{ Label = "Zip"; Value = $HospitalInfo.Zip }
+                        @{ Label = "Hospital Manager"; Value = $HospitalInfo.'Hospital Manager' }
+                        @{ Label = "Manager Email"; Value = $HospitalInfo.'Hospital Manager Email' }
+                        @{ Label = "Phone"; Value = $HospitalInfo.Phone }
+                        @{ Label = "Time Zone"; Value = $HospitalInfo.'Time Zone' }
+                        @{ Label = "GP URL"; Value = $HospitalInfo.GPURL }
+                        @{ Label = "Back Line"; Value = $HospitalInfo.'Back Line' }
+                        @{ Label = "System Conversion Date"; Value = $HospitalInfo.'System Conversion Date' }
+                        @{ Label = "System Type"; Value = $HospitalInfo.'System Type' }
+                        @{ Label = "Hours"; Value = if ($hours) { $hours } else { "N/A (fetch failed or not available)" } }
+                    )
+
+                    # Convert to JSON for safe passing to new window
+                    $hospitalJson = $hospitalData | ConvertTo-Json -Compress
+
+                    # Launch new PowerShell window (pass JSON via -EncodedCommand)
+                    $fullCommand = @"
+`$displayScript = {
+    param(`$jsonData)
+    `$host.UI.RawUI.BackgroundColor = "Black"
+    `$host.UI.RawUI.ForegroundColor = "White"
+    Clear-Host
+
+    Write-Host "Hospital Information for AU ${AU}" -ForegroundColor Green
+    `$data = `$jsonData | ConvertFrom-Json
+    foreach (`$item in `$data) {
+        Write-Host (`$item.Label + ": ") -NoNewline -ForegroundColor Yellow
+        Write-Host `$item.Value -ForegroundColor White
+    }
+    Write-Host "`n" -ForegroundColor White
+    Write-Host "Press Enter to close this window..." -ForegroundColor Yellow
+    Read-Host | Out-Null
+    exit
+}
+
+& `$displayScript -jsonData '$hospitalJson'
+"@
+
+                    $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($fullCommand))
+                    Start-Process powershell.exe -ArgumentList "-NoExit", "-EncodedCommand", $encodedCommand -WindowStyle Normal
+                } else {
+                    Write-Host "Hospital master not loaded. No separate info window available." -ForegroundColor Yellow
+                }
             } else {
                 Write-Host "Hospital AU $AU not found in HOSPITALMASTER.xlsx. Please verify the AU number or update the file." -ForegroundColor Yellow
             }
@@ -3010,6 +3031,7 @@ try {
 
         # Menu Improvements: Use hashtable for menu options
         $menuOptions = @{
+            "000" = "Open Changelog"
             "0" = "Change AU"
             "1" = "Abaxis MAC Address Search"
             "2" = "Woofware Errors Check"
@@ -3041,14 +3063,36 @@ try {
             "81" = "Launch WOOFware Reports Website"
             "82" = "Launch Fuse Website"
             "83" = "win: Restart Sparky Services"
+            "84" = "Show Hospital Information"
         }
 
         # Sort keys numerically, handling non-numeric suffixes (e.g., "2b", "14u")
-        foreach ($key in ($menuOptions.Keys | Sort-Object @{Expression={ 
+        $sortedKeys = $menuOptions.Keys | Sort-Object @{Expression={ 
             $match = [regex]::Match($_, '^(\d+)'); 
             if ($match.Success) { [int]$match.Groups[1].Value } else { 999 }
-        }}, @{Expression={$_}})) {
-            Write-Host "$key. $($menuOptions[$key])" -ForegroundColor Cyan
+        }}, @{Expression={$_}}
+
+        # Display menu in two columns: first half on left, second half on right
+        $mid = [math]::Ceiling($sortedKeys.Count / 2)
+        for ($i = 0; $i -lt $mid; $i++) {
+            # Left column
+            $optionL = $sortedKeys[$i]
+            $descL = $menuOptions[$sortedKeys[$i]]
+            Write-Host $optionL -NoNewline -ForegroundColor Green
+            Write-Host " - $descL" -NoNewline -ForegroundColor Cyan
+            $usedL = $optionL.Length + 3 + $descL.Length
+            $spacesL = [math]::Max(0, 50 - $usedL)
+            Write-Host (" " * $spacesL) -NoNewline
+
+            # Right column
+            $rightIndex = $i + $mid
+            if ($rightIndex -lt $sortedKeys.Count) {
+                $optionR = $sortedKeys[$rightIndex]
+                $descR = $menuOptions[$sortedKeys[$rightIndex]]
+                Write-Host $optionR -NoNewline -ForegroundColor Green
+                Write-Host " - $descR" -NoNewline -ForegroundColor Cyan
+            }
+            Write-Host ""
         }
 
         $menuActive = $true
@@ -3094,6 +3138,11 @@ try {
             $choice = (Read-Host).Trim()
 
             switch ($choice) {
+                "000" {
+                    # Open Changelog
+                    Start-Process "notepad.exe" "$PSScriptRoot\VCATechManager-Changelog.txt"
+                    Write-Host "Opening changelog in Notepad." -ForegroundColor Green
+                }
                 "0" {
                     Write-Host "Returning to AU prompt..." -ForegroundColor Green
                     $menuActive = $false
@@ -3197,6 +3246,7 @@ try {
                     Write-Host "  'exit' at AU prompt: Exits the script" -ForegroundColor White
                     Write-Host "" -ForegroundColor White
                     Write-Host "Menu Options:" -ForegroundColor Yellow
+                    Write-Host "000. Open Changelog: Opens the changelog file in Notepad." -ForegroundColor White
                     Write-Host "1. Abaxis MAC Address Search: Searches for Abaxis device MACs in DHCP leases and reservations." -ForegroundColor White
                     Write-Host "2. Woofware Errors Check: Checks application logs for Woofware errors on NS servers." -ForegroundColor White
                     Write-Host "2b. Woofware Errors Check by User: Checks Woofware errors filtered by selected user on NS servers." -ForegroundColor White
@@ -3469,14 +3519,84 @@ try {
                 "83" {
                     Invoke-MenuOption83 -AU $AU -ADCredential $ADCredential
                 }
+                "84" {
+                    # Show Hospital Information
+                    if ($HospitalMaster -and $HospitalInfo) {
+                        # Create structured data for easy coloring and copying
+                        $hospitalData = @(
+                            @{ Label = "Operating Name"; Value = $HospitalInfo.'Operating Name' }
+                            @{ Label = "Hospital Number"; Value = $HospitalInfo.'Hospital Number' }
+                            @{ Label = "Address"; Value = $HospitalInfo.Address }
+                            @{ Label = "City"; Value = $HospitalInfo.City }
+                            @{ Label = "State"; Value = $HospitalInfo.St }
+                            @{ Label = "Zip"; Value = $HospitalInfo.Zip }
+                            @{ Label = "Hospital Manager"; Value = $HospitalInfo.'Hospital Manager' }
+                            @{ Label = "Manager Email"; Value = $HospitalInfo.'Hospital Manager Email' }
+                            @{ Label = "Phone"; Value = $HospitalInfo.Phone }
+                            @{ Label = "Time Zone"; Value = $HospitalInfo.'Time Zone' }
+                            @{ Label = "GP URL"; Value = $HospitalInfo.GPURL }
+                            @{ Label = "Back Line"; Value = $HospitalInfo.'Back Line' }
+                            @{ Label = "System Conversion Date"; Value = $HospitalInfo.'System Conversion Date' }
+                            @{ Label = "System Type"; Value = $HospitalInfo.'System Type' }
+                            @{ Label = "Hours"; Value = if ($hours) { $hours } else { "N/A (fetch failed or not available)" } }
+                        )
+
+                        # Convert to JSON for safe passing to new window
+                        $hospitalJson = $hospitalData | ConvertTo-Json -Compress
+
+                        # Launch new PowerShell window (pass JSON via -EncodedCommand)
+                        $fullCommand = @"
+`$displayScript = {
+    param(`$jsonData)
+    `$host.UI.RawUI.BackgroundColor = "Black"
+    `$host.UI.RawUI.ForegroundColor = "White"
+    Clear-Host
+
+    Write-Host "Hospital Information for AU ${AU}" -ForegroundColor Green
+    `$data = `$jsonData | ConvertFrom-Json
+    foreach (`$item in `$data) {
+        Write-Host (`$item.Label + ": ") -NoNewline -ForegroundColor Yellow
+        Write-Host `$item.Value -ForegroundColor White
+    }
+    Write-Host "`n" -ForegroundColor White
+    Write-Host "Press Enter to close this window..." -ForegroundColor Yellow
+    Read-Host | Out-Null
+    exit
+}
+
+& `$displayScript -jsonData '$hospitalJson'
+"@
+
+                        $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($fullCommand))
+                        Start-Process powershell.exe -ArgumentList "-NoExit", "-EncodedCommand", $encodedCommand -WindowStyle Normal
+                    } else {
+                        Write-Host "Hospital master not loaded. No separate info window available." -ForegroundColor Yellow
+                    }
+                }
                 "h" {
                     Clear-Host
                     Write-Host "`n--- Main Menu for AU $AU (v$version) ---" -ForegroundColor Green
-                    foreach ($key in ($menuOptions.Keys | Sort-Object @{Expression={ 
-                        $match = [regex]::Match($_, '^(\d+)'); 
-                        if ($match.Success) { [int]$match.Groups[1].Value } else { 999 }
-                    }}, @{Expression={$_}})) {
-                        Write-Host "$key. $($menuOptions[$key])" -ForegroundColor Cyan
+                    # Display menu in two columns: first half on left, second half on right
+                    $mid = [math]::Ceiling($sortedKeys.Count / 2)
+                    for ($i = 0; $i -lt $mid; $i++) {
+                        # Left column
+                        $optionL = $sortedKeys[$i]
+                        $descL = $menuOptions[$sortedKeys[$i]]
+                        Write-Host $optionL -NoNewline -ForegroundColor Green
+                        Write-Host " - $descL" -NoNewline -ForegroundColor Cyan
+                        $usedL = $optionL.Length + 3 + $descL.Length
+                        $spacesL = [math]::Max(0, 50 - $usedL)
+                        Write-Host (" " * $spacesL) -NoNewline
+
+                        # Right column
+                        $rightIndex = $i + $mid
+                        if ($rightIndex -lt $sortedKeys.Count) {
+                            $optionR = $sortedKeys[$rightIndex]
+                            $descR = $menuOptions[$sortedKeys[$rightIndex]]
+                            Write-Host $optionR -NoNewline -ForegroundColor Green
+                            Write-Host " - $descR" -NoNewline -ForegroundColor Cyan
+                        }
+                        Write-Host ""
                     }
                 }
                 "999" {

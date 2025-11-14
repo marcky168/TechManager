@@ -6,9 +6,9 @@ VCATechManager is a PowerShell-based IT management tool for VCA hospital network
 ## Architecture
 - **Main Entry**: `VCATechManager.ps1` - Menu system that loads modules and calls functions.
 - **Modules**: `Private/VCATechManagerFunctions.psm1` for shared utilities; `Private/lib/` for third-party modules (e.g., PoshRSJob, PSTerminalServices).
-- **Scripts**: `Private/*.ps1` for specific functions (e.g., ADUserManagement.ps1).
-- **Data**: `csv/` for hospital master Excel; `logs/` for timestamped log files.
-- **Binaries**: `bin/` for tools like VNC viewer.
+- **Scripts**: `Private/*.ps1` for specific functions (e.g., ADFunctions.ps1, NetworkFunctions.ps1, UserSessionFunctions.ps1).
+- **Data**: `Private/csv/` for hospital master Excel; `logs/` for timestamped log files.
+- **Binaries**: `Private/bin/` for tools like VNC viewer.
 - **Credentials**: Stored in `Private/*.xml` (encrypted).
 
 ## Key Patterns & Conventions
@@ -25,7 +25,7 @@ VCATechManager is a PowerShell-based IT management tool for VCA hospital network
 - **Build/Run**: Execute `VCATechManager.ps1` directly; no build step. Ensure RSAT and modules are installed.
 - **Debugging**: Use `Write-Debug` for verbose output; check `logs/` for errors. Test functions in isolation (e.g., `Get-CachedServers -AU 123`).
 - **Testing**: Manual testing per AU; verify parallel jobs complete without errors. Use mock data for unit-like tests.
-- **Versioning & Updates**: Update version number in `Private/Version.txt` and append changes to `VCATechManager-Changelog.txt` with format "vX.Y - YYYY-MM-DD\n+ Change description". Script checks GitHub for updates at startup via `https://raw.githubusercontent.com/marcky168/VCATechManager/main/Private/Version.txt`.
+- **Versioning & Updates**: Update version number in both `VCATechManager.ps1` and `version.txt`/`Private/Version.txt` files. Append changes to `VCATechManager-Changelog.txt` with format "vX.Y - YYYY-MM-DD\n+ Change description". Script checks GitHub for updates at startup via `https://raw.githubusercontent.com/marcky168/VCATechManager/main/version.txt`.
 
 ## Integration Points
 - **AD**: Query users/groups with `Get-ADUser/Get-ADGroupMember`; server discovery via `Get-ADComputer`.

@@ -2,6 +2,19 @@ VCA Tech Manager - Changelog
 Author: Marc Yap
 Contributors: Grok (AI Assistant)
 
+Changelog Legend:
+* = Feature modification
++ = New feature
+- = Feature was removed
+
+v1.60 - 2025-10-23
++ CODE QUALITY IMPROVEMENT: Removed unused variables to resolve PSScriptAnalyzer warnings and improve code maintainability
++ MENU UI ENHANCEMENT: Reformatted menu display by removing dots from option numbers, adding dashes (" - ") between numbers and descriptions, and coloring option numbers green for better readability
++ MENU FUNCTIONALITY: Added option "000" to open the changelog file directly from the menu for quick access to version history
++ SECURITY COMPLIANCE: Removed unauthorized Advanced IP Scanner option "16b" and associated Invoke-AdvancedIPScanOnScope function due to security policy requirements
++ DOCUMENTATION IMPROVEMENT: Added changelog legend to explain symbols (* = feature modification, + = new feature, - = feature removed) for clearer change tracking
++ VERSION MANAGEMENT: Updated version to 1.60 across all relevant files (VCATechManager.ps1, version.txt) and added comprehensive changelog entry
+
 v1.59 - 2025-11-11
 + FUSE DEVICE CLASSIFICATION FIX: Corrected MAC address format comparison in Invoke-AbaxisMacSearch function - changed from checking "00-90-FB" to "0090FB" to match the normalized format from Convert-MacAddress function, ensuring physical Fuses with MAC prefix 00-90-FB are correctly identified as physical devices instead of virtual
 + DHCP DEDUPLICATION ENHANCEMENT: Added deduplication logic for DHCP leases and reservations in Invoke-AbaxisMacSearch function using Sort-Object IPAddress -Unique to prevent duplicate devices from appearing when multiple DHCP servers return the same lease/reservation data
