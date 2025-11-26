@@ -12,6 +12,9 @@ v1.61 - 2025-11-26
 + REMOTE DHCP EXECUTION: Modified DHCP reservation operations to execute directly on DHCP servers using Invoke-Command with credentials, eliminating the need for local DhcpServer module installation and resolving credential parameter compatibility issues
 + ERROR HANDLING IMPROVEMENT: Enhanced DHCP cmdlet parameter handling with proper [IPAddress] casting in remote scriptblocks to prevent parameter binding failures and ensure reliable reservation management across multiple DHCP servers
 + CODE CLEANUP: Removed unnecessary Import-Module DhcpServer from Add-DHCPReservation function since DHCP operations now execute remotely via Invoke-Command
++ OPTION 14 IMPROVEMENT: Added alphabetical sorting of user names in the AD user selection gridview for better usability
++ INPUT HANDLING: Added trimming of username input in option 14 to handle accidental spaces
++ LOGGING ENHANCEMENT: Added timestamped logging for option execution start and completion with detailed messages
 
 v1.60 - 2025-10-23
 + CODE QUALITY IMPROVEMENT: Removed unused variables to resolve PSScriptAnalyzer warnings and improve code maintainability
