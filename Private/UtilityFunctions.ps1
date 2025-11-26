@@ -457,13 +457,13 @@ function Get-DHCPLeases {
         if ($Credential) {
             $leaseParams['Credential'] = $Credential
         }
-        return Get-DhcpServerv4Lease @leaseParams
+        return DhcpServer\Get-DhcpServerv4Lease @leaseParams
     } catch {
         if ($_.Exception.Message -match "parameter cannot be found" -and $Credential) {
             # Retry without Credential
             $leaseParams.Remove('Credential')
             try {
-                return Get-DhcpServerv4Lease @leaseParams
+                return DhcpServer\Get-DhcpServerv4Lease @leaseParams
             } catch {
                 Write-Warning "Could not retrieve leases from DHCP server '$DHCPServer': $($_.Exception.Message)"
                 return $null
@@ -493,13 +493,13 @@ function Get-DHCPReservations {
         if ($Credential) {
             $resParams['Credential'] = $Credential
         }
-        return Get-DhcpServerv4Reservation @resParams
+        return DhcpServer\Get-DhcpServerv4Reservation @resParams
     } catch {
         if ($_.Exception.Message -match "parameter cannot be found" -and $Credential) {
             # Retry without Credential
             $resParams.Remove('Credential')
             try {
-                return Get-DhcpServerv4Reservation @resParams
+                return DhcpServer\Get-DhcpServerv4Reservation @resParams
             } catch {
                 Write-Warning "Could not retrieve reservations from DHCP server '$DHCPServer': $($_.Exception.Message)"
                 return $null

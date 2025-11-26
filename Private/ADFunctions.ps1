@@ -33,11 +33,31 @@ function ADUserManagement {
 
         # Display users in a GridView for selection
         $selectedUser = $users | Select-Object Name, SamAccountName, EmailAddress, LockedOut, PasswordExpired, LastLogonDate |
+                        Sort-Object Name |
                         Out-GridView -Title "Select user for management in AU $AU" -OutputMode Single
 
         if ($selectedUser) {
             Write-Host "Selected user: $($selectedUser.Name) ($($selectedUser.SamAccountName))" -ForegroundColor Cyan
-            $action = Read-Host "Choose action: (r)eset password, (u)nlock account, (c)ancel"
+
+            # Display AD properties for the selected user
+            try {
+                # Get domain password policy for expiry calculation
+                $MaxPasswordAge = (Get-ADDefaultDomainPasswordPolicy -Server "vcaantech.com" -Credential $Credential).MaxPasswordAge
+                $adUser = Get-ADUser -Identity $selectedUser.SamAccountName -Properties Name, Title, OfficePhone, Office, Department, EmailAddress, StreetAddress, City, State, PostalCode, SID, Created, extensionAttribute3, PasswordLastSet -Server "vcaantech.com" -Credential $Credential -ErrorAction Stop
+                Write-Host "`nAD Properties for $($selectedUser.SamAccountName) :" -ForegroundColor Cyan
+                $adUser | Select-Object Name, Title, @{n='OfficePhone'; e={$_.OfficePhone}}, Office, Department, EmailAddress, StreetAddress, City, State, PostalCode, SID, Created, extensionAttribute3, PasswordLastSet, @{n='PasswordExpires'; e={ if ($_.PasswordLastSet) { $_.PasswordLastSet + $MaxPasswordAge } else { 'Never Set' } }} | Format-List
+            } catch {
+                Write-Host "Could not retrieve AD properties for $($selectedUser.SamAccountName): $($_.Exception.Message)" -ForegroundColor Yellow
+                Write-ConditionalLog "AD properties retrieval error for $($selectedUser.SamAccountName): $($_.Exception.Message)"
+            }
+
+            do {
+                $action = Read-Host "Choose action: (r)eset password, (u)nlock account, (c)ancel"
+                $action = $action.Trim()
+                if ($action -notin @('r', 'u', 'c')) {
+                    Write-Host "Invalid input. Please enter 'r' for reset password, 'u' for unlock account, or 'c' to cancel." -ForegroundColor Yellow
+                }
+            } while ($action -notin @('r', 'u', 'c'))
 
             switch ($action.ToLower()) {
                 'r' {
