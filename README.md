@@ -1,6 +1,6 @@
-# VCATechManager
+# TechManager
 
-A PowerShell-based IT management tool for VCA hospital networks.
+A PowerShell-based IT management tool for hospital networks.
 
 ## Security Notice
 
@@ -32,10 +32,6 @@ Create `Private/config.json` with the following structure:
     },
     "ServerNaming": {
         "DHCPServerPattern": "your-dhcp-pattern"
-    },
-    "FilePaths": {
-        "HospitalMasterPath": "/sites/your-site/regions/Documents/HOSPITALMASTER.xlsx",
-        "SharePointBaseUrl": "https://yourcompany.sharepoint.com"
     }
 }
 ```
