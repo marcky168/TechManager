@@ -1,4 +1,4 @@
-# VCATechManager
+# TechManager
 
 A PowerShell-based IT management tool for VCA hospital networks.
 
