@@ -74,8 +74,8 @@ function ADUserManagement {
                         } catch {
                             Write-Host "Error resetting password: $($_.Exception.Message)" -ForegroundColor Red
                             Write-ConditionalLog "Password reset error for $($selectedUser.SamAccountName): $($_.Exception.Message)"
-                            if ($_.Exception.Message -match "access denied|credential|authentication|logon failure|unauthorized|permission") {
-                                Write-Host "This appears to be a credential issue. Please update the admin credentials via menu option 11." -ForegroundColor Yellow
+                            if ($_.Exception.Message -imatch "access denied|credential|authentication|logon failure|unauthorized|permission") {
+                                Write-Host "This appears to be a credential issue. Please update the admin credentials via menu option 11." -ForegroundColor Red
                             }
                         }
                     } else {
@@ -94,8 +94,8 @@ function ADUserManagement {
                     } catch {
                         Write-Host "Error unlocking account: $($_.Exception.Message)" -ForegroundColor Red
                         Write-ConditionalLog "Account unlock error for $($selectedUser.SamAccountName): $($_.Exception.Message)"
-                        if ($_.Exception.Message -match "access denied|credential|authentication|logon failure|unauthorized|permission") {
-                            Write-Host "This appears to be a credential issue. Please update the admin credentials via menu option 11." -ForegroundColor Yellow
+                        if ($_.Exception.Message -imatch "access denied|credential|authentication|logon failure|unauthorized|permission") {
+                            Write-Host "This appears to be a credential issue. Please update the admin credentials via menu option 11." -ForegroundColor Red
                         }
                     }
                 }
@@ -113,8 +113,8 @@ function ADUserManagement {
     } catch {
         Write-Host "Error fetching AD users for group $($groupName): $($_.Exception.Message)" -ForegroundColor Red
         Write-ConditionalLog "AD user fetch error for ${groupName}: $($_.Exception.Message)"
-        if ($_.Exception.Message -match "access denied|credential|authentication|logon failure|unauthorized|permission") {
-            Write-Host "This appears to be a credential issue. Would you like to update the AD credentials? (y/n)" -ForegroundColor Yellow
+        if ($_.Exception.Message -imatch "access denied|credential|authentication|logon failure|unauthorized|permission") {
+            Write-Host "This appears to be a credential issue. Would you like to update the AD credentials? (y/n)" -ForegroundColor Red
             $updateCred = Read-Host
             if ($updateCred.ToLower() -eq 'y') {
                 $newCred = Get-Credential -Message "Enter AD domain credentials (e.g., vcaantech\youruser)"

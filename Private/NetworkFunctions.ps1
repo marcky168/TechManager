@@ -108,8 +108,8 @@ function DeviceConnectivityTest {
         }
     } catch {
         Write-Host "Error fetching leases from $selectedServer : $($_.Exception.Message)" -ForegroundColor Yellow
-        if ($_.Exception.Message -match "access denied|credential|authentication|logon failure|unauthorized|permission") {
-            Write-Host "This appears to be a credential issue. Please use menu option 11 to update the admin credentials." -ForegroundColor Yellow
+        if ($_.Exception.Message -imatch "access denied|credential|authentication|logon failure|unauthorized|permission") {
+            Write-Host "This appears to be a credential issue. Please use menu option 11 to update the admin credentials." -ForegroundColor Red
         }
     }
 
@@ -138,8 +138,8 @@ function DeviceConnectivityTest {
         }
     } catch {
         Write-Host "Error fetching reservations from $selectedServer : $($_.Exception.Message)" -ForegroundColor Yellow
-        if ($_.Exception.Message -match "access denied|credential|authentication|logon failure|unauthorized|permission") {
-            Write-Host "This appears to be a credential issue. Please use menu option 11 to update the admin credentials." -ForegroundColor Yellow
+        if ($_.Exception.Message -imatch "access denied|credential|authentication|logon failure|unauthorized|permission") {
+            Write-Host "This appears to be a credential issue. Please use menu option 11 to update the admin credentials." -ForegroundColor Red
         }
     }
 
@@ -345,8 +345,8 @@ function ShowAllDHCPLeases {
         }
     } catch {
         Write-Host "Error fetching leases from $selectedServer : $($_.Exception.Message)" -ForegroundColor Yellow
-        if ($_.Exception.Message -match "access denied|credential|authentication|logon failure|unauthorized|permission") {
-            Write-Host "This appears to be a credential issue. Please use menu option 11 to update the admin credentials." -ForegroundColor Yellow
+        if ($_.Exception.Message -imatch "access denied|credential|authentication|logon failure|unauthorized|permission") {
+            Write-Host "This appears to be a credential issue. Please use menu option 11 to update the admin credentials." -ForegroundColor Red
         }
     }
 
@@ -367,8 +367,8 @@ function ShowAllDHCPLeases {
         }
     } catch {
         Write-Host "Error fetching reservations from $selectedServer : $($_.Exception.Message)" -ForegroundColor Yellow
-        if ($_.Exception.Message -match "access denied|credential|authentication|logon failure|unauthorized|permission") {
-            Write-Host "This appears to be a credential issue. Please use menu option 11 to update the admin credentials." -ForegroundColor Yellow
+        if ($_.Exception.Message -imatch "access denied|credential|authentication|logon failure|unauthorized|permission") {
+            Write-Host "This appears to be a credential issue. Please use menu option 11 to update the admin credentials." -ForegroundColor Red
         }
     }
 
@@ -617,8 +617,8 @@ function SearchCreditCardDevices {
         }
     } catch {
         Write-Host "Error fetching leases from $selectedServer : $($_.Exception.Message)" -ForegroundColor Yellow
-        if ($_.Exception.Message -match "access denied|credential|authentication|logon failure|unauthorized|permission") {
-            Write-Host "This appears to be a credential issue. Please use menu option 11 to update the admin credentials." -ForegroundColor Yellow
+        if ($_.Exception.Message -imatch "access denied|credential|authentication|logon failure|unauthorized|permission") {
+            Write-Host "This appears to be a credential issue. Please use menu option 11 to update the admin credentials." -ForegroundColor Red
         }
     }
 
@@ -647,8 +647,8 @@ function SearchCreditCardDevices {
         }
     } catch {
         Write-Host "Error fetching reservations from $selectedServer : $($_.Exception.Message)" -ForegroundColor Yellow
-        if ($_.Exception.Message -match "access denied|credential|authentication|logon failure|unauthorized|permission") {
-            Write-Host "This appears to be a credential issue. Please use menu option 11 to update the admin credentials." -ForegroundColor Yellow
+        if ($_.Exception.Message -imatch "access denied|credential|authentication|logon failure|unauthorized|permission") {
+            Write-Host "This appears to be a credential issue. Please use menu option 11 to update the admin credentials." -ForegroundColor Red
         }
     }
 

@@ -428,7 +428,7 @@ function Get-CachedServers {
             Write-Status "Failed to query servers for AU $AU (Attempt $retryCount/$maxRetries). Error: $($_.Exception.Message)" Red
             Write-Log "Server query failed: $($_.Exception.Message) | StackTrace: $($_.Exception.StackTrace)"
 
-            if ($_.Exception.Message -match "access denied|permission|credential" -and $retryCount -lt $maxRetries) {
+            if ($_.Exception.Message -imatch "access denied|permission|credential" -and $retryCount -lt $maxRetries) {
                 Write-Status "Access denied with current credentials. Prompting for alternative AD credentials..." Yellow
                 $Credential = Get-ADSecureCredential -CredPath $credentialPathAD -ForcePrompt
             } else {
@@ -593,11 +593,18 @@ try {
             $updateChoice = Read-Host "Download and update to version $remoteVersion? (y/n)"
             if ($updateChoice.ToLower() -eq 'y') {
                 try {
+                    Write-Host "Downloading latest script..." -ForegroundColor Yellow
                     $scriptUrl = "https://raw.githubusercontent.com/marcky168/VCATechManager/main/VCATechManager.ps1"
                     $newScriptPath = "$PSScriptRoot\VCATechManager_new.ps1"
                     Invoke-WebRequest -Uri $scriptUrl -OutFile $newScriptPath -UseBasicParsing
+                    Write-Host "Download complete. Replacing script..." -ForegroundColor Yellow
                     Move-Item -Path $newScriptPath -Destination $PSScriptRoot\VCATechManager.ps1 -Force
-                    Write-Host "Updated to version $remoteVersion. Reloading script..." -ForegroundColor Green
+                    # Also update version.txt
+                    $versionUrl = "https://raw.githubusercontent.com/marcky168/VCATechManager/main/version.txt"
+                    Invoke-WebRequest -Uri $versionUrl -OutFile "$PSScriptRoot\version.txt" -UseBasicParsing
+                    $privateVersionUrl = "https://raw.githubusercontent.com/marcky168/VCATechManager/main/Private/Version.txt"
+                    Invoke-WebRequest -Uri $privateVersionUrl -OutFile "$PSScriptRoot\Private\Version.txt" -UseBasicParsing
+                    Write-Host "Script updated successfully. Reloading..." -ForegroundColor Green
                     Write-Log "Updated script to version $remoteVersion"
                     Start-Process -FilePath "$PSScriptRoot\VCATechManager.cmd"
                     exit
@@ -870,8 +877,8 @@ try {
                     if ($serverLeases) { $leases += $serverLeases }
                 } catch {
                     Write-Status "WARNING: Could not retrieve leases from DHCP server '$dhcpServer': $($_.Exception.Message)" Yellow
-                    if ($_.Exception.Message -match "access denied|credential|authentication|logon failure|unauthorized|permission") {
-                        Write-Host "This appears to be a credential issue. Please update the admin credentials via menu option 11." -ForegroundColor Yellow
+                    if ($_.Exception.Message -imatch "access denied|credential|authentication|logon failure|unauthorized|permission") {
+                        Write-Host "This appears to be a credential issue. Please update the admin credentials via menu option 11." -ForegroundColor Red
                     }
                 }
             }
@@ -921,8 +928,8 @@ try {
                     if ($serverRes) { $reservations += $serverRes }
                 } catch {
                     Write-Status "WARNING: Could not retrieve reservations from DHCP server '$dhcpServer': $($_.Exception.Message)" Yellow
-                    if ($_.Exception.Message -match "access denied|credential|authentication|logon failure|unauthorized|permission") {
-                        Write-Host "This appears to be a credential issue. Please update the admin credentials via menu option 11." -ForegroundColor Yellow
+                    if ($_.Exception.Message -imatch "access denied|credential|authentication|logon failure|unauthorized|permission") {
+                        Write-Host "This appears to be a credential issue. Please update the admin credentials via menu option 11." -ForegroundColor Red
                     }
                 }
             }
@@ -2031,8 +2038,8 @@ try {
                 Write-Host "Error with DHCP on $Server : $($_.Exception.Message)" -ForegroundColor Red
                 Write-Log "DHCP error on $Server : $($_.Exception.Message)"
                 $results += "Error with DHCP on $Server : $($_.Exception.Message)"
-                if ($_.Exception.Message -match "access denied|credential|authentication|logon failure|unauthorized|permission") {
-                    Write-Host "This appears to be a credential issue. Please update the admin credentials via menu option 11." -ForegroundColor Yellow
+                if ($_.Exception.Message -imatch "access denied|credential|authentication|logon failure|unauthorized|permission") {
+                    Write-Host "This appears to be a credential issue. Please update the admin credentials via menu option 11." -ForegroundColor Red
                 }
             }
         }
@@ -2634,9 +2641,14 @@ try {
         }
         catch {
             Write-Warning $_.Exception.Message
-            if ($_.Exception.Message -match "access denied|credential|authentication|logon failure|unauthorized|permission") {
-                Write-Host "This appears to be a credential issue. Please update the admin credentials via menu option 11." -ForegroundColor Yellow
+            if ($_.Exception.Message -imatch "access denied|credential|authentication|logon failure|unauthorized|permission") {
+                Write-Host "This appears to be a credential issue. Please update the admin credentials via menu option 11." -ForegroundColor Red
             }
+        }
+
+        # If no scope selected due to access denied, show credential message
+        if (-not $DhcpScopeSelection) {
+            Write-Host "This appears to be a credential issue. Please update the admin credentials via menu option 11." -ForegroundColor Red
         }
     }
 
