@@ -1,6 +1,6 @@
 # TechManager
 
-A PowerShell-based IT management tool for VCA hospital networks.
+A PowerShell-based IT management tool for hospital networks.
 
 ## Security Notice
 
