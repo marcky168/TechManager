@@ -1,4 +1,4 @@
-﻿if(!(Get-Command ig -ErrorAction SilentlyContinue)) {
+if(!(Get-Command ig -ErrorAction SilentlyContinue)) {
 
     "Use ``Install-Module NameIT`` to get the needed module from the gallery to support running this script"
 

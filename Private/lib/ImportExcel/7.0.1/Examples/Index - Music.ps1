@@ -1,4 +1,4 @@
-﻿#requires -modules "Get-IndexedItem"
+#requires -modules "Get-IndexedItem"
 [CmdletBinding()]
 Param()
 Remove-Item ~\documents\music.xlsx -ErrorAction SilentlyContinue

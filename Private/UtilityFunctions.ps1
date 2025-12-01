@@ -1,7 +1,7 @@
 # Consolidated Utility Functions
-# Contains: Convert-VcaAU, Copy-ToPSSession, Stop-SparkyShell, Remove-BakRegistry, Update-Changelog
+# Contains: Convert-AU, Copy-ToPSSession, Stop-SparkyShell, Remove-BakRegistry, Update-Changelog
 
-function Convert-VcaAU {
+function Convert-AU {
     #Ver. 181211
      #Improved -ilo switch to work correctly with clustered naming convention.
      #Fixed issue with RetainSuffixNumber when a FQDN was provided.
@@ -588,7 +588,7 @@ function Invoke-MenuOption83 {
     }
 
     Clear-Variable -Name SiteServers, SiteAU -ErrorAction Ignore
-    $SiteAU = Convert-VcaAu -AU $AU -Suffix ''
+    $SiteAU = Convert-AU -AU $AU -Suffix ''
 
     # Build Get-ADComputer parameters
     $adParams = @{
@@ -668,7 +668,7 @@ function Invoke-MenuOption1 {
         if (-not $ADCredential -or -not (Test-ADCredentials -Credential $ADCredential)) {
             Write-Host "AD credentials invalid. Prompting for new ones..." -ForegroundColor Yellow
             try {
-                $ADCredential = Get-Credential -Message "Enter AD domain credentials (e.g., vcaantech\youruser)" -ErrorAction Stop
+                $ADCredential = Get-Credential -Message "Enter AD domain credentials (e.g., domain\youruser)" -ErrorAction Stop
                 if ($ADCredential) {
                     $ADCredential | Export-Clixml -Path $ADPath -Force -ErrorAction Stop
                     Write-Host "AD credentials saved." -ForegroundColor Green
@@ -686,7 +686,7 @@ function Invoke-MenuOption1 {
 
         # Server selection
         Clear-Variable -Name SelectedServers, SiteAU -ErrorAction Ignore
-        $SiteAU = Convert-VcaAu -AU $AU -Suffix ''
+        $SiteAU = Convert-AU -AU $AU -Suffix ''
         $adComputerParams = @{
             Filter     = "Name -like '$SiteAU-*' -and Name -notlike '*CNF:*' -and OperatingSystem -like '*Server*' -or Name -like '$SiteAU-Util*'"
             Properties = 'IPv4Address', 'OperatingSystem'

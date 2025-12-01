@@ -1,4 +1,4 @@
-﻿function Add-PivotTable {
+function Add-PivotTable {
     [CmdletBinding(defaultParameterSetName = 'ChartbyParams')]
     [OutputType([OfficeOpenXml.Table.PivotTable.ExcelPivotTable])]
     param (

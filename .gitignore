@@ -3,8 +3,8 @@ logs/
 *.log
 
 # Ignore credential files
-Private/vcaadcred.xml
-Private/vcaadmin.xml
+Private/adcred.xml
+Private/admincred.xml
 Private/github_pat.txt
 *.xml
 

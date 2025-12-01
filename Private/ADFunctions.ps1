@@ -8,7 +8,7 @@ function ADUserManagement {
     Write-ConditionalLog "Starting AD User Management for AU $AU"
 
     # Load admin credentials securely (prompt/save if missing or invalid)
-    $adminCredPath = "$global:ScriptRoot\Private\vcaadmin.xml"
+    $adminCredPath = "$global:ScriptRoot\Private\admincred.xml"
     $AdminCredential = Get-AdminSecureCredential -CredPath $adminCredPath
 
     if (-not $AdminCredential) {

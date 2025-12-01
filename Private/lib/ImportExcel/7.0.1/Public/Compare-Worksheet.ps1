@@ -1,4 +1,4 @@
-﻿function Compare-Worksheet {
+function Compare-Worksheet {
     [CmdletBinding(DefaultParameterSetName)]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification="Write host used for sub-warning level message to operator which does not form output")]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '', Justification="False positives when initializing variable in begin block")]

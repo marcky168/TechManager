@@ -1,4 +1,4 @@
-﻿<# (c) Copyright 2015 Hewlett Packard Enterprise Development LP #>
+<# (c) Copyright 2015 Hewlett Packard Enterprise Development LP #>
 Add-Type @'
 public class AsyncPipeline
 {

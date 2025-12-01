@@ -20,7 +20,7 @@ if (Test-Path $configPath) {
 }
 
 # Start a transcript early so we capture runtime errors/messages even if the window closes quickly
-$transcriptPath = "$env:TEMP\VCATechManager_transcript_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
+$transcriptPath = "$env:TEMP\TechManager_transcript_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
 try {
     if (-not (Get-PSHostProcessInfo -ErrorAction SilentlyContinue)) {
         # Best-effort Start-Transcript for PS5.1
@@ -37,7 +37,7 @@ $logDir = Join-Path $PSScriptRoot 'logs'
 if (-not (Test-Path $logDir)) {
     try { New-Item -Path $logDir -ItemType Directory -Force | Out-Null } catch {}
 }
-$logPath = Join-Path $logDir ("VCATechManager_log_{0}.txt" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
+$logPath = Join-Path $logDir ("TechManager_log_{0}.txt" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
 
 # Provide minimal fallback logging and status functions in case the module that defines them fails to load
 if (-not (Get-Command -Name Write-Log -ErrorAction SilentlyContinue)) {
@@ -153,7 +153,7 @@ function Get-ADSecureCredential {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPlainTextForPassword", "CredPath")]
     param(
         [string]$CredPath,
-        [string]$PromptMessage = "Enter AD domain credentials (e.g., vcaantech\youruser)",
+        [string]$PromptMessage = "Enter AD domain credentials (e.g., domain\youruser)",
         [switch]$ForcePrompt = $false
     )
 
@@ -206,7 +206,7 @@ function Get-AdminSecureCredential {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPlainTextForPassword", "CredPath")]
     param(
         [string]$CredPath,
-        [string]$PromptMessage = "Enter admin credentials (e.g., vcaantech\marcy.admin)",
+        [string]$PromptMessage = "Enter admin credentials (e.g., domain\admin)",
         [switch]$ForcePrompt = $false,
         [string]$TestServer = $null  # Optional: Server to test credentials against
     )
@@ -252,7 +252,7 @@ function Get-AdminSecureCredential {
 }
 
 # Load credentials early with centralized function
-$credentialPathAD = "$PSScriptRoot\Private\vcaadcred.xml"
+$credentialPathAD = "$PSScriptRoot\Private\adcred.xml"
 $ADCredential = Get-ADSecureCredential -CredPath $credentialPathAD
 
 # If on domain and no explicit creds, set to null to use default context
@@ -399,7 +399,7 @@ function Get-CachedServers {
         return $validAUs[$cacheKey].Servers
     }
 
-    $SiteAU = Convert-VcaAu -AU $AU -Suffix ''
+    $SiteAU = Convert-AU -AU $AU -Suffix ''
     $maxRetries = 2  # Prevent infinite loops
     $retryCount = 0
     $servers = @()
@@ -484,12 +484,12 @@ function Invoke-GitHubApi {
 
 function Sync-Repo {
     $owner = "marcky168"
-    $repo = "VCATechManager"
+    $repo = "TechManager"
     $branch = "main"
     $lastCommitShaFile = "$PSScriptRoot\last_commit_sha.txt"
     $apiHeaders = @{
         Accept = "application/vnd.github+json"
-        "User-Agent" = "VCATechManager-Script/$version"
+        "User-Agent" = "TechManager-Script/$version"
     }
 
     $patPath = "$PSScriptRoot\Private\github_pat.txt"
@@ -550,7 +550,7 @@ function Sync-Repo {
                 Write-Host "Downloaded/Updated: $path" -ForegroundColor Green
                 Write-Log "Downloaded/Updated: $path"
                 $updatedFiles++
-                if ($path -eq "VCATechManager.ps1") {
+                if ($path -eq "TechManager.ps1") {
                     $scriptUpdated = $true
                 }
             } catch {
@@ -564,10 +564,10 @@ function Sync-Repo {
     Write-Host "Repo sync complete. Updated $updatedFiles files." -ForegroundColor Green
     Write-Log "Repo sync complete"
     if ($scriptUpdated) {
-        Write-Host "VCATechManager.ps1 has been updated. Relaunching in 3 seconds..." -ForegroundColor Cyan
+        Write-Host "TechManager.ps1 has been updated. Relaunching in 3 seconds..." -ForegroundColor Cyan
         Write-Log "Relaunching script due to update"
         Start-Sleep -Seconds 3
-        Start-Process -FilePath "$PSScriptRoot\VCATechManager.cmd" -WorkingDirectory $PSScriptRoot
+        Start-Process -FilePath "$PSScriptRoot\TechManager.cmd" -WorkingDirectory $PSScriptRoot
         exit
     }
 }
@@ -581,12 +581,12 @@ $global:ScriptRoot = $PSScriptRoot
 
 try {
     # Import the custom module for shared functions (e.g., Get-UserSessionsParallel)
-    Import-Module -Name "$PSScriptRoot\Private\VCATechManagerFunctions.psm1" -ErrorAction Stop
-    Write-Log "Imported custom module: VCATechManagerFunctions"
+    Import-Module -Name "$PSScriptRoot\Private\TechManagerFunctions.psm1" -ErrorAction Stop
+    Write-Log "Imported custom module: TechManagerFunctions"
 
     # New: Auto-update logic in the version check section
     try {
-        $remoteVersion = Invoke-WebRequest -Uri "https://raw.githubusercontent.com/marcky168/VCATechManager/main/version.txt" -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Content
+        $remoteVersion = Invoke-WebRequest -Uri "https://raw.githubusercontent.com/marcky168/TechManager/main/version.txt" -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Content
         if ($remoteVersion -gt $version) {
             Write-Host "New version available: $remoteVersion. Update recommended." -ForegroundColor Yellow
             Write-Log "New version detected: $remoteVersion"
@@ -594,19 +594,19 @@ try {
             if ($updateChoice.ToLower() -eq 'y') {
                 try {
                     Write-Host "Downloading latest script..." -ForegroundColor Yellow
-                    $scriptUrl = "https://raw.githubusercontent.com/marcky168/VCATechManager/main/VCATechManager.ps1"
-                    $newScriptPath = "$PSScriptRoot\VCATechManager_new.ps1"
+                    $scriptUrl = "https://raw.githubusercontent.com/marcky168/TechManager/main/TechManager.ps1"
+                    $newScriptPath = "$PSScriptRoot\TechManager_new.ps1"
                     Invoke-WebRequest -Uri $scriptUrl -OutFile $newScriptPath -UseBasicParsing
                     Write-Host "Download complete. Replacing script..." -ForegroundColor Yellow
-                    Move-Item -Path $newScriptPath -Destination $PSScriptRoot\VCATechManager.ps1 -Force
+                    Move-Item -Path $newScriptPath -Destination $PSScriptRoot\TechManager.ps1 -Force
                     # Also update version.txt
-                    $versionUrl = "https://raw.githubusercontent.com/marcky168/VCATechManager/main/version.txt"
+                    $versionUrl = "https://raw.githubusercontent.com/marcky168/TechManager/main/version.txt"
                     Invoke-WebRequest -Uri $versionUrl -OutFile "$PSScriptRoot\version.txt" -UseBasicParsing
-                    $privateVersionUrl = "https://raw.githubusercontent.com/marcky168/VCATechManager/main/Private/Version.txt"
+                    $privateVersionUrl = "https://raw.githubusercontent.com/marcky168/TechManager/main/Private/Version.txt"
                     Invoke-WebRequest -Uri $privateVersionUrl -OutFile "$PSScriptRoot\Private\Version.txt" -UseBasicParsing
                     Write-Host "Script updated successfully. Reloading..." -ForegroundColor Green
                     Write-Log "Updated script to version $remoteVersion"
-                    Start-Process -FilePath "$PSScriptRoot\VCATechManager.cmd"
+                    Start-Process -FilePath "$PSScriptRoot\TechManager.cmd"
                     exit
                 } catch {
                     Write-Host "Update failed: $($_.Exception.Message)" -ForegroundColor Red
@@ -617,7 +617,7 @@ try {
 
         # Check for repo updates using version check
         Write-Host "Checking for repo updates..." -ForegroundColor Yellow
-        $remoteVersionUrl = "https://raw.githubusercontent.com/marcky168/VCATechManager/main/Private/Version.txt"
+        $remoteVersionUrl = "https://raw.githubusercontent.com/marcky168/TechManager/main/Private/Version.txt"
         try {
             $remoteVersion = Invoke-WebRequest -Uri $remoteVersionUrl -UseBasicParsing | Select-Object -ExpandProperty Content
             $remoteVersion = $remoteVersion.Trim()
@@ -792,13 +792,13 @@ try {
     }
 
     # Function to get servers for AU with enhanced validation and error handling
-    function Get-VCAServers {
+    function Get-Servers {
         param([string]$AU)
         # Parameter validation: AU must be numeric and 3-6 digits
         if ($AU -notmatch '^\d{3,6}$') {
             throw "Invalid AU number. Please enter a 3 to 6 digit number."
         }
-        $SiteAU = Convert-VcaAu -AU $AU -Suffix ''
+        $SiteAU = Convert-AU -AU $AU -Suffix ''
         try {
             # Use splatting for Get-ADComputer; only include Server/Credential if available
             $adComputerParams = @{
@@ -816,7 +816,7 @@ try {
         } catch {
             if ($_.Exception.Message -like "*credentials*") {
                 Write-Host "Warning: AD credentials invalid. Some features may not work. Update via menu option 11." -ForegroundColor Yellow
-                Write-Log "AD credentials invalid in Get-VCAServers: $($_.Exception.Message) | StackTrace: $($_.Exception.StackTrace)"
+                Write-Log "AD credentials invalid in Get-Servers: $($_.Exception.Message) | StackTrace: $($_.Exception.StackTrace)"
                 return @()
             } else {
                 Write-Log "Error fetching servers for AU $AU : $($_.Exception.Message) | StackTrace: $($_.Exception.StackTrace)"
@@ -831,7 +831,7 @@ try {
         Write-Log "Starting Abaxis MAC Address Search for AU $AU"
 
         # Load admin credentials for DHCP server access
-        $adminCredPath = "$PSScriptRoot\Private\vcaadmin.xml"
+        $adminCredPath = "$PSScriptRoot\Private\admincred.xml"
         $Credential = $null
         if (Test-Path $adminCredPath) {
             try {
@@ -852,7 +852,7 @@ try {
         $ipCache = @{}
 
     $dhcpServers = Get-DHCPServersForAU -AU $AU -Credential $ADCredential
-        $hostname = Convert-VcaAu -AU $AU -Suffix '-gw'
+        $hostname = Convert-AU -AU $AU -Suffix '-gw'
 
         # Resolve gateway IP using helper function
         $ipAddresses = Resolve-HostIP -Hostname $hostname -IpCache $ipCache
@@ -1046,7 +1046,7 @@ try {
         }
 
        # Add nslookup for Hxxxx-fuse
-        $fuseHostname = Convert-VcaAu -AU $AU -Suffix '-fuse'
+        $fuseHostname = Convert-AU -AU $AU -Suffix '-fuse'
         if (-not $ipCache.ContainsKey($fuseHostname)) {
             try {
                 $fuseIpAddresses = [System.Net.Dns]::GetHostAddresses($fuseHostname)
@@ -1956,7 +1956,7 @@ try {
         $ipCache = @{}
 
         # Load admin credentials for DHCP server access
-        $adminCredPath = "$PSScriptRoot\Private\vcaadmin.xml"
+        $adminCredPath = "$PSScriptRoot\Private\admincred.xml"
         if (Test-Path $adminCredPath) {
             try {
                 $Credential = Import-Clixml -Path $adminCredPath
@@ -1980,7 +1980,7 @@ try {
         }
         $MACAddress = "00-90-FB-$macSuffix"
 
-        $hostname = Convert-VcaAu -AU $AU -Suffix '-gw'
+        $hostname = Convert-AU -AU $AU -Suffix '-gw'
 
          # Optimized DNS resolution with caching
         if (-not $ipCache.ContainsKey($hostname)) {
@@ -2615,7 +2615,7 @@ try {
             $DhcpScopeName,
             [pscredential]$Credential
         )
-        $SitePrefix = $ComputerName  # Use raw AU number instead of Convert-VcaAu to avoid "h" prefix
+        $SitePrefix = $ComputerName  # Use raw AU number instead of Convert-AU to avoid "h" prefix
 
         try {
             if (-not $DhcpScopes -and -not $DhcpScopeId) {
@@ -2658,7 +2658,7 @@ try {
         Write-Log "Starting Run Angry IP Scanner on DHCP Scope for AU $AU"
 
         # Load admin credentials for DHCP server access (required for permissions)
-        $adminCredPath = "$PSScriptRoot\Private\vcaadmin.xml"
+        $adminCredPath = "$PSScriptRoot\Private\admincred.xml"
         if (Test-Path $adminCredPath) {
             try {
                 $Credential = Import-Clixml -Path $adminCredPath
@@ -2752,7 +2752,7 @@ try {
         Clear-Host
 
         # Display tool name and version at top with spacing
-        Write-Host "`n`n  VCATechManager v$version`n" -ForegroundColor Magenta
+        Write-Host "`n`n  TechManager v$version`n" -ForegroundColor Magenta
 
         Write-Host "Enter the AU number (or 'zip' to create deployment package, 'exit' to quit): " -NoNewline -ForegroundColor Cyan
         $AU = (Read-Host).Trim()
@@ -2767,21 +2767,21 @@ try {
             Write-Host "Creating deployment zip package..." -ForegroundColor Green
             
             try {
-                $zipName = "VCATechManager_v${version}_$(Get-Date -Format 'yyyyMMdd_HHmmss').zip"
+                $zipName = "TechManager_v${version}_$(Get-Date -Format 'yyyyMMdd_HHmmss').zip"
                 $zipPath = Join-Path $PSScriptRoot $zipName
                 
                 # Define files and directories to include
                 $includeItems = @(
-                    "VCATechManager.ps1",
-                    "VCATechManager.cmd", 
+                    "TechManager.ps1",
+                    "TechManager.cmd", 
                     "README.md",
-                    "VCATechManager-Changelog.txt",
+                    "TechManager-Changelog.txt",
                     "version.txt",
                     "Private/"
                 )
                 
                 # Create temporary directory for zip contents
-                $tempDir = Join-Path $env:TEMP "VCATechManager_ZipTemp_$(Get-Random)"
+                $tempDir = Join-Path $env:TEMP "TechManager_ZipTemp_$(Get-Random)"
                 New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
                 
                 # Copy files and directories, excluding sensitive data
@@ -2847,7 +2847,7 @@ try {
             if ($validAUs[$AU]) {
                 $servers = $validAUs[$AU]
             } else {
-                $servers = Get-VCAServers -AU $AU -ErrorAction Stop
+                $servers = Get-Servers -AU $AU -ErrorAction Stop
                 $validAUs[$AU] = $servers
             }
             # Check for empty servers
@@ -3040,7 +3040,7 @@ try {
         }
 
         # Set window title with AU and Timezone
-        $host.UI.RawUI.WindowTitle = "VCATechManager v$version - [$AU] - $(if ($HospitalInfo.'Time Zone') { $HospitalInfo.'Time Zone'} else { 'Timezone Not Available'}) - $scriptPath"
+        $host.UI.RawUI.WindowTitle = "TechManager v$version - [$AU] - $(if ($HospitalInfo.'Time Zone') { $HospitalInfo.'Time Zone'} else { 'Timezone Not Available'}) - $scriptPath"
 
         # Display the menu once after entering AU
         Write-Host "`n--- Main Menu for AU $AU (v$version) ---" -ForegroundColor Green
@@ -3155,31 +3155,31 @@ try {
 
             switch ($choice) {
                 "000" {
-                    Write-Log "Option 000 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 000 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 000 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 000 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Open Changelog
-                    Start-Process "notepad.exe" "$PSScriptRoot\VCATechManager-Changelog.txt"
+                    Start-Process "notepad.exe" "$PSScriptRoot\TechManager-Changelog.txt"
                     Write-Host "Opening changelog in Notepad." -ForegroundColor Green
-                    Write-Log "Option 000 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 000 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "0" {
-                    Write-Log "Option 0 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 0 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 0 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 0 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     Write-Host "Returning to AU prompt..." -ForegroundColor Green
                     $menuActive = $false
                     # Reset window title to base
-                    $host.UI.RawUI.WindowTitle = "VCATechManager v$version - $scriptPath"
-                    Write-Log "Option 0 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    $host.UI.RawUI.WindowTitle = "TechManager v$version - $scriptPath"
+                    Write-Log "Option 0 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "1" {
-                    Write-Log "Option 1 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 1 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 1 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 1 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     Invoke-MenuOption1 -AU $AU -ADCredential $ADCredential -ADPath $credentialPathAD
-                    Write-Log "Option 1 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 1 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "2" {
-                    Write-Log "Option 2 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 2 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 2 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 2 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Import PoshRSJob for parallel processing
                     try {
                         Import-Module -Name "$PSScriptRoot\Private\lib\PoshRSJob\1.7.4.4\PoshRSJob.psm1" -ErrorAction Stop
@@ -3188,35 +3188,35 @@ try {
                         continue
                     }
                     Get-WoofwareErrors -AU $AU
-                    Write-Log "Option 2 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 2 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "2b" {
-                    Write-Log "Option 2b started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 2b started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 2b started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 2b started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     Get-WoofwareErrorsByUser -AU $AU
-                    Write-Log "Option 2b completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 2b completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "2c" {
-                    Write-Log "Option 2c started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 2c started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 2c started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 2c started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     Get-ApplicationHangErrors -AU $AU
-                    Write-Log "Option 2c completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 2c completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "3" {
-                    Write-Log "Option 3 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 3 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 3 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 3 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     Add-DHCPReservation -AU $AU
-                    Write-Log "Option 3 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 3 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "4" {
-                    Write-Log "Option 4 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 4 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 4 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 4 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     Invoke-GPUpdateForce -AU $AU
-                    Write-Log "Option 4 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 4 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "5" {
-                    Write-Log "Option 5 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 5 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 5 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 5 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Check AD credentials before proceeding
                     if (-not $ADCredential -or -not (Test-ADCredentials -Credential $ADCredential)) {
                         Write-Host "AD credentials invalid or missing. Prompting for new ones..." -ForegroundColor Yellow
@@ -3242,24 +3242,24 @@ try {
                         Write-Host "Error in option 5: $($_.Exception.Message)" -ForegroundColor Red
                         Write-Log "Error in option 5: $($_.Exception.Message) | StackTrace: $($_.Exception.StackTrace)"
                     }
-                    Write-Log "Option 5 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 5 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "5b" {
-                    Write-Log "Option 5b started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 5b started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 5b started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 5b started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Show All Logged On Users and Launch VNC
                     Get-AllLoggedOnUsers -AU $AU
-                    Write-Log "Option 5b completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 5b completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "6" {
-                    Write-Log "Option 6 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 6 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 6 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 6 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     Stop-SparkyShell -AU $AU
-                    Write-Log "Option 6 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 6 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "6d" {
-                    Write-Log "Option 6d started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 6d started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 6d started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 6d started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Debug Kill Sparky Shell - list Sparky processes on servers
                     Write-Host "Debug: Listing Sparky processes on servers for AU $AU" -ForegroundColor Cyan
                     Write-Log "Debug: Listing Sparky processes for AU $AU"
@@ -3284,19 +3284,19 @@ try {
                             Write-Log "Debug error on $server : $($_.Exception.Message)"
                         }
                     }
-                    Write-Log "Option 6d completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 6d completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "7" {
-                    Write-Log "Option 7 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 7 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 7 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 7 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     Write-Host "Exiting..." -ForegroundColor Green
                     $exitScript = $true
                     $menuActive = $false
-                    Write-Log "Option 7 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 7 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "8" {
-                    Write-Log "Option 8 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 8 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 8 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 8 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     Write-Host "Help Menu:" -ForegroundColor Green
                     Write-Host "Special Commands:" -ForegroundColor Yellow
                     Write-Host "  'zip' at AU prompt: Creates a deployment zip package with script files and data" -ForegroundColor White
@@ -3329,34 +3329,34 @@ try {
                 }
 
                 "9" {
-                    Write-Log "Option 9 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 9 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 9 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 9 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     $verboseLogging = -not $verboseLogging
                     Write-Host "Verbose logging now $(if ($verboseLogging) {'On'} else {'Off'})." -ForegroundColor Green
-                    Write-Log "Option 9 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 9 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "10" {
-                    Write-Log "Option 10 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 10 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 10 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 10 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Launch Mosio
                     Start-Process "https://biz.mosio.com/login"
                     Write-Host "Opening Mosio login page." -ForegroundColor Green
-                    Write-Log "Option 10 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 10 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "10b" {
-                    Write-Log "Option 10b started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 10b started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 10b started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 10b started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Launch Idexx Vetconnect
                     Start-Process "https://www.vetconnectplus.com/login?returnUrl=%2Fhome"
                     Write-Host "Opening Idexx Vetconnect login page." -ForegroundColor Green
-                    Write-Log "Option 10b completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 10b completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "11" {
-                    Write-Log "Option 11 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 11 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 11 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 11 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Manage Admin Credentials
                     try {
-                        $credPath = "$PSScriptRoot\Private\vcaadmin.xml"         # Standardized path with uppercase 'Private'
+                        $credPath = "$PSScriptRoot\Private\admincred.xml"         # Standardized path with uppercase 'Private'
                         $TargetCreds = @('vcaadmin')
                         $CredentialTargetsObj = $TargetCreds | foreach-object {
                             $TargetCreds_Item = $PSItem
@@ -3413,27 +3413,27 @@ try {
                         Write-Host "Error managing credentials: $($_.Exception.Message)" -ForegroundColor Red
                         Write-Log "Error managing admin credentials: $($_.Exception.Message)"
                     }
-                    Write-Log "Option 11 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 11 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "12" {
-                    Write-Log "Option 12 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 12 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 12 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 12 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Device Connectivity Test
                     DeviceConnectivityTest -AU $AU
-                    Write-Log "Option 12 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 12 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "13" {
-                    Write-Log "Option 13 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 13 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 13 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 13 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Launch ServiceNow for AU All Tickets
                     $snUrl = "https://marsvh.service-now.com/now/nav/ui/classic/params/target/incident_list.do%3Fsysparm_query%3Du_departmentLIKE$AU%2520-%26sysparm_first_row%3D1%26sysparm_view%3D"
                     Start-Process $snUrl
                     Write-Host "Opening ServiceNow for AU $AU all tickets." -ForegroundColor Green
-                    Write-Log "Option 13 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 13 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "12b" {
-                    Write-Log "Option 12b started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 12b started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 12b started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 12b started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Graphical Ping to Fuse (use host-list like VCAHospLauncher #13)
                     try {
                         # Prefer the richer site-hostname list if helper is available
@@ -3442,7 +3442,7 @@ try {
                         }
                         else {
                             # Fallback to only the fuse hostname
-                            $siteHostnames = @(Convert-VcaAu -AU $AU -Suffix '-fuse')
+                            $siteHostnames = @(Convert-AU -AU $AU -Suffix '-fuse')
                         }
 
                         if (-not $siteHostnames) { throw 'No hostnames determined for this AU.' }
@@ -3494,34 +3494,34 @@ try {
                     } catch {
                         Write-Host "Could not launch PingInfoView for AU $AU : $($_.Exception.Message)" -ForegroundColor Red
                     }
-                    Write-Log "Option 12b completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 12b completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "12c" {
-                    Write-Log "Option 12c started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 12c started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 12c started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 12c started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Show all DHCP leases and reservations
                     ShowAllDHCPLeases -AU $AU
-                    Write-Log "Option 12c completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 12c completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "12d" {
-                    Write-Log "Option 12d started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 12d started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 12d started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 12d started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Search for credit card devices
                     SearchCreditCardDevices -AU $AU
-                    Write-Log "Option 12d completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 12d completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "13b" {
-                    Write-Log "Option 13b started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 13b started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 13b started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 13b started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Launch ServiceNow for AU Open Tickets
                     $snUrl = "https://marsvh.service-now.com/now/nav/ui/classic/params/target/incident_list.do%3Fsysparm_query%3Du_departmentLIKE$AU%2520-%255Eincident_state!%253D6%255EORincident_state%253DNULL%255Eincident_state!%253D7%255EORincident_state%253DNULL%26sysparm_first_row%3D1%26sysparm_view%3D"
                     Start-Process $snUrl
                     Write-Host "Opening ServiceNow for AU $AU open tickets." -ForegroundColor Green
-                    Write-Log "Option 13b completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 13b completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "14" {
-                    Write-Log "Option 14 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 14 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 14 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 14 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # AD User Management
                     if (-not (Test-ADCredentials -Credential $ADCredential)) {
                         Write-Host "AD credentials invalid. Prompting for new ones..." -ForegroundColor Yellow
@@ -3536,11 +3536,11 @@ try {
                         }
                     }
                     ADUserManagement -AU $AU -Credential $ADCredential
-                    Write-Log "Option 14 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 14 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "14u" {
-                    Write-Log "Option 14u started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 14u started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 14u started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 14u started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Update Hospital Master
                     Update-HospitalMaster
                     # Reload hospital master after update
@@ -3548,11 +3548,11 @@ try {
                         $HospitalMaster = Import-Excel -Path "$PSScriptRoot\Private\csv\HOSPITALMASTER.xlsx" -WorksheetName Misc
                         Write-Host "Hospital master reloaded." -ForegroundColor Green
                     }
-                    Write-Log "Option 14u completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 14u completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "15" {
-                    Write-Log "Option 15 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 15 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 15 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 15 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Launch vSphere for Fuse VM based on hospital location
                     if ($HospitalInfo -and $HospitalInfo.'Time Zone') {
                         $timeZone = $HospitalInfo.'Time Zone'
@@ -3571,22 +3571,22 @@ try {
                     } else {
                         Write-Host "Hospital time zone not available. Cannot determine vSphere URL for AU $AU." -ForegroundColor Red
                     }
-                    Write-Log "Option 15 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 15 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "16" {
-                    Write-Log "Option 16 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 16 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 16 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 16 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Run Angry IP Scanner on DHCP Scope
                     Invoke-AngryIPScanOnScope -AU $AU
-                    Write-Log "Option 16 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 16 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "19" {
-                    Write-Log "Option 19 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 19 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 19 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 19 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # rdc
                     if (Get-Module -Name ActiveDirectory) {
                         Clear-Variable -Name SiteServers, SiteAU -ErrorAction Ignore
-                        $SiteAU = Convert-VcaAu -AU $AU -Suffix ''
+                        $SiteAU = Convert-AU -AU $AU -Suffix ''
                         # Use splatting for Get-ADComputer
                         $adComputerParams = @{
                             Filter     = "Name -like '$SiteAU-*' -and Name -notlike '*CNF:*' -and OperatingSystem -like '*Server*' -or Name -like '$SiteAU-Util*'"
@@ -3609,33 +3609,33 @@ try {
                         Write-Warning 'ActiveDirectory module not found.'
                         Write-Warning 'For enhanced functionality please install RSAT https://www.microsoft.com/en-us/download/details.aspx?id=45520'
                     }
-                    Write-Log "Option 19 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 19 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "81" {
-                    Write-Log "Option 81 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 81 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 81 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 81 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Launch WOOFware Reports Website
-                    $ComputerNameStripped = Convert-VcaAu -AU $AU -Suffix ''
+                    $ComputerNameStripped = Convert-AU -AU $AU -Suffix ''
                     Start-Process "http://$ComputerNameStripped-db/reports/browse/WOOFware%20Reports"
-                    Write-Log "Option 81 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 81 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "82" {
-                    Write-Log "Option 82 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 82 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 82 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 82 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Launch Fuse Website
-                    $ComputerNameStripped = Convert-VcaAu -AU $AU -Suffix ''
+                    $ComputerNameStripped = Convert-AU -AU $AU -Suffix ''
                     Start-Process "https://$ComputerNameStripped-fuse:8443"
-                    Write-Log "Option 82 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 82 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "83" {
-                    Write-Log "Option 83 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 83 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 83 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 83 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     Invoke-MenuOption83 -AU $AU -ADCredential $ADCredential
-                    Write-Log "Option 83 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 83 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "84" {
-                    Write-Log "Option 84 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 84 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 84 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 84 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # Show Hospital Information
                     if ($HospitalMaster -and $HospitalInfo) {
                         # Create structured data for easy coloring and copying
@@ -3688,11 +3688,11 @@ try {
                     } else {
                         Write-Host "Hospital master not loaded. No separate info window available." -ForegroundColor Yellow
                     }
-                    Write-Log "Option 84 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option 84 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "h" {
-                    Write-Log "Option h started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option h started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option h started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option h started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     Clear-Host
                     Write-Host "`n--- Main Menu for AU $AU (v$version) ---" -ForegroundColor Green
                     # Display menu in two columns: first half on left, second half on right
@@ -3717,20 +3717,20 @@ try {
                         }
                         Write-Host ""
                     }
-                    Write-Log "Option h completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Option h completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 "999" {
-                    Write-Log "Option 999 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Option 999 started - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Option 999 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Option 999 started - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     # New Session
-                    Start-Process -FilePath "$PSScriptRoot\VCATechManager.cmd" -WorkingDirectory $PSScriptRoot
-                    Write-Log "Option 999 completed - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Start-Process -FilePath "$PSScriptRoot\TechManager.cmd" -WorkingDirectory $PSScriptRoot
+                    Write-Log "Option 999 completed - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
                 default {
-                    Write-Log "Invalid option selected - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-                    Write-Host "Invalid option selected - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
+                    Write-Log "Invalid option selected - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Host "Invalid option selected - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
                     Write-Host "Invalid choice. Please select a valid option from the menu or 'h' for menu." -ForegroundColor Red
-                    Write-Log "Invalid option selected - VCATechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+                    Write-Log "Invalid option selected - TechManager v$version - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
                 }
             }
         } while ($menuActive)
@@ -3749,7 +3749,7 @@ try {
 
     # Always write a fallback error file to %TEMP%
     try {
-        $fallback = Join-Path $env:TEMP ("VCATechManager_error_{0}.log" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
+        $fallback = Join-Path $env:TEMP ("TechManager_error_{0}.log" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
         $fullError | Out-File -FilePath $fallback -Encoding UTF8 -Force
         Write-Host "An error occurred during script execution. Error details written to: $fallback" -ForegroundColor Red
     } catch {

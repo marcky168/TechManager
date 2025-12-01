@@ -59,8 +59,8 @@ if ([VMware.VimAutomation.ViCore.Util10.SettingsManager]::ParticipateInCEIP -eq 
 			"VMware's Customer Experience Improvement Program (`"CEIP`") provides VMware with information " +
 			"that enables VMware to improve its products and services, to fix problems, and to advise you " +
 			"on how best to deploy and use our products.  As part of the CEIP, VMware collects technical information " +
-			"about your organization’s use of VMware products and services on a regular basis in association " +
-			"with your organization’s VMware license key(s).  This information does not personally identify " +
+			"about your organizationï¿½s use of VMware products and services on a regular basis in association " +
+			"with your organizationï¿½s VMware license key(s).  This information does not personally identify " +
 			"any individual." +
 			"`n`nFor more details: type `"help about_ceip`" to see the related help article." +
 			"`n`nTo disable this warning and set your preference use the following command and restart PowerShell: " +

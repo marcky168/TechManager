@@ -1,4 +1,4 @@
-﻿# To ship, is to choose
+# To ship, is to choose
 
 #ipmo .\ImportExcel.psd1 -Force
 

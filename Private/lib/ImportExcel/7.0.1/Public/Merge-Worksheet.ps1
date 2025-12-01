@@ -1,4 +1,4 @@
-﻿function Merge-Worksheet {
+function Merge-Worksheet {
     [CmdletBinding(SupportsShouldProcess=$true)]
     param(
          [parameter(ParameterSetName='A',Mandatory=$true,Position=0)]  #A = Compare two files default headers

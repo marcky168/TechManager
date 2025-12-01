@@ -1,4 +1,4 @@
-﻿$xlfile = "$env:TEMP\Places.xlsx"
+$xlfile = "$env:TEMP\Places.xlsx"
 
 Remove-Item $xlfile -ErrorAction SilentlyContinue
 

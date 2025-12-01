@@ -1,4 +1,4 @@
-﻿function Export-Excel {
+function Export-Excel {
     [CmdletBinding(DefaultParameterSetName = 'Default')]
     [OutputType([OfficeOpenXml.ExcelPackage])]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPlainTextForPassword", "")]

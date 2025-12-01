@@ -22,7 +22,7 @@ v1.60 - 2025-10-23
 + MENU FUNCTIONALITY: Added option "000" to open the changelog file directly from the menu for quick access to version history
 + SECURITY COMPLIANCE: Removed unauthorized Advanced IP Scanner option "16b" and associated Invoke-AdvancedIPScanOnScope function due to security policy requirements
 + DOCUMENTATION IMPROVEMENT: Added changelog legend to explain symbols (* = feature modification, + = new feature, - = feature removed) for clearer change tracking
-+ VERSION MANAGEMENT: Updated version to 1.60 across all relevant files (VCATechManager.ps1, version.txt) and added comprehensive changelog entry
++ VERSION MANAGEMENT: Updated version to 1.60 across all relevant files (TechManager.ps1, version.txt) and added comprehensive changelog entry
 
 v1.59 - 2025-11-11
 + FUSE DEVICE CLASSIFICATION FIX: Corrected MAC address format comparison in Invoke-AbaxisMacSearch function - changed from checking "00-90-FB" to "0090FB" to match the normalized format from Convert-MacAddress function, ensuring physical Fuses with MAC prefix 00-90-FB are correctly identified as physical devices instead of virtual
@@ -49,7 +49,7 @@ v1.55 - 2025-10-30
 
 v1.54 - 2025-10-29
 + DEPLOYMENT PACKAGE FEATURE: Added hidden 'zip' command at AU prompt to create complete deployment packages containing all script files, modules, and data files (including CSV folder) for easy distribution and installation
-+ ZIP FUNCTIONALITY: Creates timestamped zip files (VCATechManager_v1.54_YYYYMMDD_HHMMSS.zip) with all necessary components while excluding only sensitive authentication credentials
++ ZIP FUNCTIONALITY: Creates timestamped zip files (TechManager_v1.54_YYYYMMDD_HHMMSS.zip) with all necessary components while excluding only sensitive authentication credentials
 + DEPLOYMENT SECURITY: Zip packages include hospital master data, telecom information, and configuration templates while maintaining security by excluding credential files
 + USER EXPERIENCE: Updated help menu and prompts to document the new zip deployment feature
 
@@ -178,14 +178,14 @@ v1.32 - 2025-10-27
 + Added retry limits (max 2 attempts) to prevent infinite loops during AD queries
 + Enhanced error handling: differentiates between credential errors and other AD failures
 + Fixed AU validation loops: server queries now fail gracefully without repeated prompts
-+ DEVELOPMENT RULE: VCAHospLauncher.ps1 is reference-only - do not modify, all development in VCATechManager.ps1
++ DEVELOPMENT RULE: VCAHospLauncher.ps1 is reference-only - do not modify, all development in TechManager.ps1
 
 v1.31 - 2025-10-27
 + SHAREPOINT AUTHENTICATION FIX: Updated Connect-PnPOnline to connect to base SharePoint URL instead of full site URL
 + Fixed Get-PnPFile to use full site-relative paths (/sites/WOOFconnect/regions/Documents/HOSPITALMASTER.xlsx) for reliable file access
 + Enhanced OAuth authentication flow with proper base URL connection and site-relative file paths
 + Improved SharePoint connection reliability by connecting to tenant root and using absolute paths
-+ DEVELOPMENT NOTE: VCAHospLauncher.ps1 is now reference-only and should not be modified - all active development occurs in VCATechManager.ps1
++ DEVELOPMENT NOTE: VCAHospLauncher.ps1 is now reference-only and should not be modified - all active development occurs in TechManager.ps1
 
 v1.30 - 2025-10-27
 + SHAREPOINT AUTHENTICATION MODERNIZATION: Replaced AD credential-based Hospital Master downloads with PnP.PowerShell OAuth authentication
@@ -225,7 +225,7 @@ v1.27 - 2025-10-27
 + Enhanced .gitignore to exclude Data/ directory and all HOSPITALMASTER files from future commits
 
 v1.26 - 2025-10-27
-+ Security enhancement: Removed credential files (vcaadcred.xml, vcaadmin.xml) from git tracking to prevent accidental upload to GitHub
++ Security enhancement: Removed credential files (adcred.xml, admincred.xml) from git tracking to prevent accidental upload to GitHub
 + Fixed credential handling: Modified Get-ADSecureCredential to return null when no valid credentials found, allowing current Windows credentials as fallback
 + Fixed RSJob variable scoping: Resolved $using: variable issues in option 83 service restart function using dynamic ScriptBlock creation
 + Improved option 83: Service restart success messages now properly display server names
@@ -298,7 +298,7 @@ v1.12 - 2025-10-23
 
 v1.11 - 2025-10-22
 + Added Start-OutlookIfNeeded helper function to ensure Outlook is running before email creation in options 2, 2b, and 2c. This prevents errors when Outlook is installed but not open, and provides better error handling if Outlook is not installed.
-+ Enabled version checking against GitHub repository (https://github.com/marcky168/VCATechManager) at startup to notify users of available updates.
++ Enabled version checking against GitHub repository (https://github.com/marcky168/TechManager) at startup to notify users of available updates.
 
 v1.10 - 2025-10-10
 + Added option 999 (New Session) to open a new script window.
@@ -320,7 +320,7 @@ v1.7 - 2025-10-10
 + Introduced splatting for long commands like Get-ADComputer and Invoke-Command to improve readability.
 + Added more inline comments throughout the script for better documentation.
 + Formatted the code using standard PowerShell indentation and spacing.
-+ Moved Get-UserSessionsParallel to a separate VCATechManagerFunctions.psm1 module for modularity and reuse.
++ Moved Get-UserSessionsParallel to a separate TechManagerFunctions.psm1 module for modularity and reuse.
 + Ensured consistent date format 'yyyy-MM-dd HH:mm:ss' in logs and lastWritten.
 + Updated import to load the new module early in the script.
 + Tested: Code formatting and module import verified.

@@ -1,4 +1,4 @@
-﻿<#
+<#
     .Synopsis
         Exports the charts in an Excel spreadSheet
     .Example

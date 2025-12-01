@@ -1,4 +1,4 @@
-﻿#Get rid of pre-exisiting sheet
+#Get rid of pre-exisiting sheet
 $path = "$Env:TEMP\test.xlsx"
 remove-item -Path $path -ErrorAction SilentlyContinue
 

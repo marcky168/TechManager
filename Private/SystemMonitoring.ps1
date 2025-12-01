@@ -326,7 +326,7 @@ function whatusers {
             }
             if (-not $VDiskResults) {
                 [PSCustomObject]@{
-                    Computer    = Convert-VcaAu -AU (@($ComputerName)[0]) -Prefix 'AU' -Suffix '' -NoLeadingZeros
+                    Computer    = Convert-AU -AU (@($ComputerName)[0]) -Prefix 'AU' -Suffix '' -NoLeadingZeros
                     SessionId   = ''
                     VDiskMount  = ''
                     VDiskNumber = ''

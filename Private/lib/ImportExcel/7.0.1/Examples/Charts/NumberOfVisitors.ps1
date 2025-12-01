@@ -1,4 +1,4 @@
-﻿$xlfile = "$env:TEMP\visitors.xlsx"
+$xlfile = "$env:TEMP\visitors.xlsx"
 Remove-Item $xlfile -ErrorAction SilentlyContinue
 
 $data = ConvertFrom-Csv @"

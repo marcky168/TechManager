@@ -18,7 +18,7 @@ function DeviceConnectivityTest {
     $testServer = $dhcpServers[0]
 
     # Load admin credentials securely (prompt/save if missing or invalid)
-    $adminCredPath = "$global:ScriptRoot\Private\vcaadmin.xml"
+    $adminCredPath = "$global:ScriptRoot\Private\admincred.xml"
     $AdminCredential = Get-AdminSecureCredential -CredPath $adminCredPath -TestServer $testServer
 
     if (-not $AdminCredential) {
@@ -249,13 +249,13 @@ function DeviceConnectivityTest {
 function ShowAllDHCPLeases {
     param([string]$AU)
 
-    Write-Host "Showing all DHCP leases and reservations for AU $AU" -ForegroundColor Cyan
-    Write-ConditionalLog "Starting Show All DHCP Leases for AU $AU"
+    Write-Host "Retrieving all DHCP leases for AU $AU" -ForegroundColor Cyan
+    Write-ConditionalLog "Starting ShowAllDHCPLeases for AU $AU"
 
     # Get DHCP servers for this AU (no cred needed here)
     $dhcpServers = Get-DHCPServersForAU -AU $AU -Credential $ADCredential
     if (-not $dhcpServers -or $dhcpServers.Count -eq 0) {
-        Write-Host "No DHCP servers configured or discovered for AU $AU. Skipping search." -ForegroundColor Yellow
+        Write-Host "No DHCP servers configured or discovered for AU $AU. Skipping." -ForegroundColor Yellow
         return
     }
 
@@ -263,7 +263,7 @@ function ShowAllDHCPLeases {
     $testServer = $dhcpServers[0]
 
     # Load admin credentials securely (prompt/save if missing or invalid)
-    $adminCredPath = "$global:ScriptRoot\Private\vcaadmin.xml"
+    $adminCredPath = "$global:ScriptRoot\Private\admincred.xml"
     $AdminCredential = Get-AdminSecureCredential -CredPath $adminCredPath -TestServer $testServer
 
     if (-not $AdminCredential) {
@@ -527,7 +527,7 @@ function SearchCreditCardDevices {
     $testServer = $dhcpServers[0]
 
     # Load admin credentials securely (prompt/save if missing or invalid)
-    $adminCredPath = "$global:ScriptRoot\Private\vcaadmin.xml"
+    $adminCredPath = "$global:ScriptRoot\Private\admincred.xml"
     $AdminCredential = Get-AdminSecureCredential -CredPath $adminCredPath -TestServer $testServer
 
     if (-not $AdminCredential) {

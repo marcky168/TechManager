@@ -1,4 +1,4 @@
-﻿ipmo WASP
+ipmo WASP
 $app = Start-Process Notepad++ -PassThru
 Start-Sleep 1
 $notepad = Select-UIElement -ProcessName Notepad++ 
