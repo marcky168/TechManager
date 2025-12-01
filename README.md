@@ -32,10 +32,6 @@ Create `Private/config.json` with the following structure:
     },
     "ServerNaming": {
         "DHCPServerPattern": "your-dhcp-pattern"
-    },
-    "FilePaths": {
-        "HospitalMasterPath": "/sites/your-site/regions/Documents/HOSPITALMASTER.xlsx",
-        "SharePointBaseUrl": "https://yourcompany.sharepoint.com"
     }
 }
 ```
