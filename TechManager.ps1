@@ -2,7 +2,7 @@
 
 
 # Set version
-$version = "1.61"  # CONFIGURATION FLEXIBILITY: Added default config values for testing while maintaining security requirements
+$version = "1.62"  # CONFIGURATION FLEXIBILITY: Added default config values for testing while maintaining security requirements
 
 # Load configuration from JSON file
 $configPath = "$PSScriptRoot\Private\config.json"

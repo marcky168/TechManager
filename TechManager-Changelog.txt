@@ -1,4 +1,4 @@
-VCA Tech Manager - Changelog
+Tech Manager - Changelog
 Author: Marc Yap
 Contributors: Grok (AI Assistant)
 
@@ -6,6 +6,11 @@ Changelog Legend:
 * = Feature modification
 + = New feature
 - = Feature was removed
+
+v1.62 - 2025-12-01
++ PROJECT RENAME: Renamed project from VCATechManager to TechManager - updated all file names, function names, log paths, credential files, repository references, and user-facing strings throughout the codebase
++ VARIABLE FIXES: Fixed PowerShell automatic variable conflicts in TechManagerFunctions.psm1 by renaming $error to $err and $event to $winEvent
++ VERSION UPDATE: Updated version to 1.62 across all relevant files (TechManager.ps1, version.txt, Private/Version.txt) and added comprehensive changelog entry
 
 v1.61 - 2025-11-26
 + DHCP RESERVATION FIXES: Fixed multiple issues in option 3 (Add DHCP Reservation) including null $ipCache variable error by adding proper initialization, Credential parameter errors by switching to Invoke-Command for remote DHCP operations, and parameter set resolution errors for Get-DhcpServerv4Reservation by using -ScopeId with filtering instead of ambiguous parameter combinations
